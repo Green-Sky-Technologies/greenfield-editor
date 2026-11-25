@@ -99,6 +99,7 @@ fn registry() -> &'static Registry {
         list.extend(proto_actions::specs());
         list.extend(comment::specs());
         list.extend(crate::vectoredit::specs());
+        list.extend(crate::agent::specs());
         list.extend(crate::shapebuilder::specs());
         list.extend(crate::codegen::specs());
         list.extend(crate::devinspect::specs());

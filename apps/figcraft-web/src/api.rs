@@ -20,7 +20,13 @@
 //! figcraft.captureDownloads(true)                                       // saves stay in the page…
 //! figcraft.files(); await figcraft.readFile("home.figcraft")            // …to be read back
 //! await figcraft.inspect()                                              // `document.inspect`
+//! await figcraft.executeAs("Claude", "command.batch", {commands: []})   // `execute` for an AI agent
 //! ```
+//!
+//! `executeAs(agent, command, params)` is `engine.execute` with the `agent` name set, as an MCP
+//! client's calls are: the agent's comments are signed with it, and its avatar and outline show where
+//! it works (`execute` itself has no agent). `command.batch` carries it to every step. A host that
+//! knows when the agent's turn starts and ends holds the presence meanwhile with `agent.presence`.
 //!
 //! Results resolve with the method's `result`; errors reject with an `Error`.
 
@@ -174,6 +180,16 @@ pub fn install() -> Result<(), JsValue> {
         "inspect",
         Closure::<dyn Fn() -> js_sys::Promise>::new(|| future_to_promise(async { outcome(&send("document.inspect", json!({})).await) }))
             .into_js_value(),
+    )?;
+    set_fn(
+        &obj,
+        "executeAs",
+        Closure::<dyn Fn(String, String, JsValue) -> js_sys::Promise>::new(|agent: String, command: String, params: JsValue| {
+            let params = js_sys::JSON::stringify(&params).ok().and_then(|s| s.as_string()).and_then(|s| serde_json::from_str(&s).ok());
+            let params = params.unwrap_or_else(|| json!({}));
+            future_to_promise(async move { outcome(&send("engine.execute", json!({"command": command, "params": params, "agent": agent})).await) })
+        })
+        .into_js_value(),
     )?;
     set_fn(
         &obj,

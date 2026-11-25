@@ -7,6 +7,10 @@ use egui::{Color32, Context, FontData, FontDefinitions, FontFamily, FontId, Stro
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Tokens {
     pub dark: bool,
+    /// Ember: an AI agent attached over MCP or driven by the host. Its avatar and the outline of the
+    /// layers it works on (none of the people colours, so it never looks like someone in a live
+    /// session). Reserved for the agent: ordinary UI never uses it. #ff9a4d on dark, #a54a0f on light.
+    pub agent: Color32,
     pub bg: Color32,
     pub panel: Color32,
     pub canvas: Color32,
@@ -99,10 +103,9 @@ pub fn under_white(c: Color32) -> Color32 {
     if c == BRAND { ACCENT } else { c }
 }
 
-/// Ember: an AI agent attached over MCP. Its avatar and the outline of the layers it works on
-/// (none of the people colours, so it never looks like someone in a live session). Reserved for
-/// the agent: ordinary UI never uses it.
-pub const AGENT: Color32 = Color32::from_rgb(0xFF, 0x9A, 0x4D);
+/// Ember ([`Tokens::agent`]) on the dark and on the light theme.
+pub const AGENT_DARK: Color32 = Color32::from_rgb(0xFF, 0x9A, 0x4D);
+pub const AGENT_LIGHT: Color32 = Color32::from_rgb(0xA5, 0x4A, 0x0F);
 
 pub const COMPONENT: Color32 = Color32::from_rgb(0x97, 0x47, 0xFF);
 /// Handoff status badges (white text on these, in both themes).
@@ -117,6 +120,7 @@ impl Tokens {
         // on every surface it sits on (`text_contrast_is_at_least_4_5_in_both_themes`).
         Self {
             dark: false,
+            agent: AGENT_LIGHT,
             bg: Color32::from_rgb(0xF3, 0xF0, 0xE8),
             panel: Color32::from_rgb(0xFB, 0xF9, 0xF4),
             canvas: Color32::from_rgb(0xF3, 0xF0, 0xE8),
@@ -163,6 +167,7 @@ impl Tokens {
         // ink #ece8de, body #b9b5ac, field #3fd67f, danger #f2554f.
         Self {
             dark: true,
+            agent: AGENT_DARK,
             bg: Color32::from_rgb(0x0B, 0x0C, 0x0A),
             panel: Color32::from_rgb(0x12, 0x14, 0x10),
             canvas: Color32::from_rgb(0x0B, 0x0C, 0x0A),
@@ -558,6 +563,20 @@ mod tests {
                 let highlight = over(v.selection.bg_fill, bg);
                 let ratio = c(v.selection.stroke.color).contrast(c(highlight));
                 assert!(ratio >= 3.0, "{theme}: selected text on {highlight:?} is {ratio:.2}:1");
+            }
+        }
+    }
+
+    /// Ember: #ff9a4d on the dark theme, #a54a0f on the light one, and the agent's outline and
+    /// avatar reach 3:1 (WCAG non-text) against the canvas and the panel they sit on.
+    #[test]
+    fn the_agent_is_ember_and_shows_on_both_themes() {
+        assert_eq!(Tokens::dark().agent, Color32::from_rgb(0xFF, 0x9A, 0x4D));
+        assert_eq!(Tokens::light().agent, Color32::from_rgb(0xA5, 0x4A, 0x0F));
+        for t in [Tokens::light(), Tokens::dark()] {
+            for (name, bg) in [("canvas", t.canvas), ("panel", t.panel)] {
+                let r = c(t.agent).contrast(c(bg));
+                assert!(r >= 3.0, "{}: ember on {name} is {r:.2}:1", if t.dark { "dark" } else { "light" });
             }
         }
     }

@@ -47,6 +47,63 @@ fn an_agents_selection_shows_it_there_and_a_look_keeps_it() {
 }
 
 #[test]
+fn a_held_presence_outlasts_the_linger_and_lingers_once_released() {
+    let mut s = Session::new();
+    let r = rect(&mut s, None, 0);
+    assert_eq!(s.execute("agent.presence", &json!({"name": "Claude", "active": true})).unwrap(), json!({"name": "Claude (agent)", "active": true}));
+    let held = s.agent_presence.clone().unwrap();
+    assert!((held.name.as_str(), held.held, held.doc) == ("Claude (agent)", true, s.ds().unwrap().uid));
+    let a_minute_on = held.at + Duration::from_secs(60);
+    assert!(s.agent_presence_at(a_minute_on).is_some(), "a quiet agent still shows while the host holds it");
+
+    // Its commands move where it works and keep the hold.
+    let r2 = id(&s.execute_as(Some("Claude"), "shape.rectangle", &json!({"x": 80, "y": 0, "width": 10, "height": 10})).unwrap());
+    let p = s.agent_presence.clone().unwrap();
+    assert_eq!((p.held, p.layers), (true, vec![r2]));
+
+    // Released: it shows for the usual linger from now.
+    s.execute("agent.presence", &json!({"name": "Claude", "active": false})).unwrap();
+    let p = s.agent_presence.clone().unwrap();
+    assert!(!p.held);
+    assert_eq!(p.layers, vec![r2], "where it worked stays for the linger");
+    assert!(s.agent_presence_at(p.at + LINGER - Duration::from_millis(1)).is_some());
+    assert!(s.agent_presence_at(p.at + LINGER).is_none());
+    let _ = r;
+}
+
+#[test]
+fn releasing_leaves_another_agents_presence_alone_and_needs_its_parameters() {
+    let mut s = Session::new();
+    rect(&mut s, Some("Codex"), 0);
+    s.execute("agent.presence", &json!({"name": "Claude", "active": false})).unwrap();
+    assert_eq!(s.agent_presence.as_ref().unwrap().name, "Codex (agent)", "Claude never had it");
+    assert!(s.execute("agent.presence", &json!({"name": "Claude"})).is_err(), "active is required");
+    assert!(s.execute("agent.presence", &json!({"active": true})).is_err(), "so is the name");
+    s.execute("agent.presence", &json!({"name": "Claude", "active": true})).unwrap();
+    assert_eq!(s.agent_presence.as_ref().unwrap().name, "Claude (agent)", "holding another agent replaces it");
+}
+
+#[test]
+fn a_batch_run_as_an_agent_shows_the_agent_on_what_its_steps_edited() {
+    let mut s = Session::new();
+    let out = s
+        .execute_as(
+            Some("Claude"),
+            "command.batch",
+            &json!({"label": "Cards", "commands": [
+                {"command": "shape.rectangle", "params": {"x": 0, "y": 0, "width": 40, "height": 40}, "as": "a"},
+                {"command": "shape.rectangle", "params": {"x": 100, "y": 0, "width": 40, "height": 40}, "as": "b"},
+            ]}),
+        )
+        .unwrap();
+    let ids: Vec<NodeId> = out.as_array().unwrap().iter().map(id).collect();
+    let p = s.agent_presence.clone().expect("the batch ran as the agent");
+    assert_eq!(p.name, "Claude (agent)");
+    assert_eq!(p.layers, ids, "both steps' layers");
+    assert_eq!(s.agent, None);
+}
+
+#[test]
 fn the_presence_goes_a_short_while_after_the_last_command() {
     let mut s = Session::new();
     rect(&mut s, Some("Claude"), 0);

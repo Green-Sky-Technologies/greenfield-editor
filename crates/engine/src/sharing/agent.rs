@@ -2,15 +2,20 @@
 //! session: its name and the layers it last edited or selected, until a short while after its last
 //! command ([`Session::execute_as`]). Display only: it is no undo step, it is never saved, and it is
 //! not presence a live session sends (the agent shows there only if it joins one itself).
+//!
+//! A host that knows when the agent's turn starts and ends holds the presence for the whole turn
+//! with `agent.presence` instead of leaving it to [`LINGER`], which runs from the last command.
 
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
 use figcraft_doc::{Document, NodeId};
+use serde_json::{Value, json};
 use web_time::Instant;
 
-use crate::{Session, changed_nodes};
+use crate::params::{boolean, req_string};
+use crate::{CommandSpec, Session, changed_nodes, spec};
 
 /// How long an agent's presence shows after its last command.
 pub const LINGER: Duration = Duration::from_secs(8);
@@ -26,13 +31,20 @@ pub struct AgentPresence {
     pub doc: u64,
     /// The layers its last edit changed (the innermost), or that it last selected.
     pub layers: Vec<NodeId>,
-    /// When its last command ran.
+    /// When its last command ran, or the host last changed what it holds.
     pub at: Instant,
+    /// The host holds it (`agent.presence {active: true}`): it shows however long the agent is
+    /// quiet, until the host lets go; then it lingers as it would after a command.
+    pub held: bool,
 }
 
 impl AgentPresence {
-    /// How much longer it shows at `now` (zero: gone).
+    /// How much longer it shows at `now` (zero: gone). A held presence always has the full linger
+    /// left.
     pub fn left(&self, now: Instant) -> Duration {
+        if self.held {
+            return LINGER;
+        }
         LINGER.saturating_sub(now.saturating_duration_since(self.at))
     }
 }
@@ -65,13 +77,45 @@ impl Session {
         let (Some(name), Ok(ds)) = (self.agent.clone(), self.ds()) else { return };
         let uid = ds.uid;
         let now = before.filter(|b| b.0 == uid).and_then(|(_, doc, sel)| touched(&doc, &ds.doc, &sel, &ds.selection));
-        let kept = self.agent_presence.take().filter(|p| p.doc == uid && p.name == name).map(|p| p.layers);
-        let layers = now.or(kept).unwrap_or_default();
-        self.agent_presence = Some(AgentPresence { name, doc: uid, layers, at: Instant::now() });
+        let kept = self.agent_presence.take().filter(|p| p.doc == uid && p.name == name);
+        let held = kept.as_ref().is_some_and(|p| p.held);
+        let layers = now.or(kept.map(|p| p.layers)).unwrap_or_default();
+        self.agent_presence = Some(AgentPresence { name, doc: uid, layers, at: Instant::now(), held });
+    }
+
+    /// `agent.presence`: the host holds the presence of the agent called `name` in the file in front
+    /// (`active`), or lets go of it (it then lingers from now, as after a command). Another agent's
+    /// presence is not touched by a release.
+    pub fn hold_agent(&mut self, name: &str, active: bool) -> crate::Result<Value> {
+        let name = crate::cmd::comment::agent_author(name);
+        let uid = self.ds()?.uid;
+        let now = Instant::now();
+        let (mine, other) = match self.agent_presence.take() {
+            Some(p) if p.name == name => (Some(p), None),
+            other => (None, other),
+        };
+        self.agent_presence = if active {
+            let layers = mine.filter(|p| p.doc == uid).map(|p| p.layers).unwrap_or_default();
+            Some(AgentPresence { name: name.clone(), doc: uid, layers, at: now, held: true })
+        } else {
+            mine.map(|p| AgentPresence { held: false, at: now, ..p }).or(other)
+        };
+        Ok(json!({"name": name, "active": active}))
     }
 
     /// The agent at work at `now`, if one ran a command less than [`LINGER`] before.
     pub fn agent_presence_at(&self, now: Instant) -> Option<&AgentPresence> {
         self.agent_presence.as_ref().filter(|p| !p.left(now).is_zero())
     }
+}
+
+/// The `agent.presence` command.
+pub fn specs() -> Vec<CommandSpec> {
+    vec![spec!(
+        "agent.presence",
+        "Hold an agent's presence",
+        "{name (the agent's client name, as in engine.execute's `agent`), active (true: it shows in the file in front until you release it; false: it goes after the usual few seconds)}  an agent's outline and avatar for a whole turn, not only after its commands",
+        false,
+        |s, p| s.hold_agent(&req_string("agent.presence", p, "name")?, boolean(p, "active").ok_or_else(|| crate::bad("agent.presence", "`active` (true or false) required"))?)
+    )]
 }

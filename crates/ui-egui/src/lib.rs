@@ -575,6 +575,8 @@ pub struct UiState {
     pub canvas_mode: bool,
     /// Messages for the host page, drained every frame by the shell ([`FigApp::take_host_events`]).
     pub host_events: Vec<HostEvent>,
+    /// The agent presence the host was last told of ([`live::agent::post_changes`]).
+    pub agent_posted: Option<live::agent::Posted>,
     /// The side panel open in a narrow window (a phone), where only one shows at a time.
     pub mobile_panel: Option<MobilePanel>,
     /// The window was narrow (one side panel at a time) at the last frame.
@@ -733,6 +735,7 @@ impl Default for UiState {
             left_collapsed: false,
             canvas_mode: false,
             host_events: Vec::new(),
+            agent_posted: None,
             mobile_panel: None,
             narrow: false,
             mirrored: false,
