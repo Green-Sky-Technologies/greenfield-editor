@@ -139,3 +139,49 @@ fn another_file_starts_afresh() {
     assert_eq!(p.doc, s.ds().unwrap().uid);
     assert!(p.layers.is_empty(), "the old file's layers don't follow it");
 }
+
+#[test]
+fn an_agents_edits_leave_the_users_selection_alone() {
+    let mut s = Session::new();
+    let f = id(&s.execute("frame.create", &json!({"x": 0, "y": 0, "width": 300, "height": 200})).unwrap());
+    s.execute("select.set", &json!({"ids": [f]})).unwrap();
+    let r = id(&s.execute_as(Some("Claude"), "shape.rectangle", &json!({"parent": f, "x": 10, "y": 10, "width": 40, "height": 40})).unwrap());
+    assert_eq!(s.selection(), vec![f], "a new layer doesn't take the user's selection");
+    assert_eq!(s.agent_presence.as_ref().unwrap().layers, vec![r], "the agent still shows on what it made");
+    s.execute_as(Some("Claude"), "edit.duplicate", &json!({"ids": [r]})).unwrap();
+    assert_eq!(s.selection(), vec![f], "nor does a copy");
+}
+
+#[test]
+fn an_agents_batch_steps_see_what_earlier_steps_selected() {
+    let mut s = Session::new();
+    let f = id(&s.execute("frame.create", &json!({"x": 0, "y": 0, "width": 300, "height": 200})).unwrap());
+    s.execute("select.set", &json!({"ids": [f]})).unwrap();
+    s.execute_as(
+        Some("Claude"),
+        "command.batch",
+        &json!({"commands": [
+            {"command": "shape.rectangle", "params": {"parent": f, "x": 0, "y": 0, "width": 40, "height": 40}},
+            {"command": "edit.duplicate", "params": {}},
+        ]}),
+    )
+    .unwrap();
+    assert_eq!(s.doc().unwrap().node(f).unwrap().children.len(), 2, "the copy is of the rectangle the first step selected");
+    assert_eq!(s.selection(), vec![f]);
+}
+
+#[test]
+fn a_layer_the_agent_deletes_leaves_the_users_selection() {
+    let mut s = Session::new();
+    let (a, b) = (rect(&mut s, None, 0), rect(&mut s, None, 100));
+    s.execute("select.set", &json!({"ids": [a, b]})).unwrap();
+    s.execute_as(Some("Claude"), "edit.delete", &json!({"ids": [a]})).unwrap();
+    assert_eq!(s.selection(), vec![b]);
+}
+
+#[test]
+fn the_users_own_new_layer_is_selected() {
+    let mut s = Session::new();
+    let a = rect(&mut s, None, 0);
+    assert_eq!(s.selection(), vec![a]);
+}
