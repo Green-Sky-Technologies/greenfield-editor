@@ -1,0 +1,138 @@
+# Greenfield's editor: build the web app in the pinned image, gate its size (25 MiB raw, SPEC.md
+# D26), run the marks check (no FigCraft or ArtCraft name or logo user-visible, Story 2.2) and the
+# Rust tests of the crates our commits touch. A push to main also publishes the built site as a
+# release editor-<12-char sha> of this repo; the run summary has the sha256 for the pin in
+# greenfield's packages/bridge/editor-release.json. Pins are in greenfield/versions.env.
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'sync/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    # Must equal BUILD_IMAGE in greenfield/versions.env (checked in the first step).
+    container: rust:1.100-trixie@sha256:223cc32ddca8f3ee90c436dbc94b6b5f052ea7f9653c5201e9612f08ad7d21b8
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the image pin
+        run: |
+          grep -qx 'BUILD_IMAGE=rust:1.100-trixie@sha256:223cc32ddca8f3ee90c436dbc94b6b5f052ea7f9653c5201e9612f08ad7d21b8' \
+            greenfield/versions.env
+
+      - name: Cache cargo registry, git deps, tools, craft-fonts and target dir
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/cargo/registry
+            /usr/local/cargo/git
+            /usr/local/cargo/bin/trunk
+            /usr/local/cargo/bin/wasm-bindgen
+            .cache/craft-fonts
+            target
+          key: editor-build-${{ hashFiles('Cargo.lock', 'greenfield/*.sh', 'greenfield/versions.env') }}
+          restore-keys: editor-build-
+
+      - name: Pinned toolchain (binaryen, brotli, wasm32 target, trunk, wasm-bindgen)
+        run: greenfield/toolchain.sh
+
+      - name: Build (marks check, trunk build --release, size gate, marks check on the site and its self-tests)
+        run: greenfield/build.sh
+
+      - name: Upload static site
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-site
+          path: .cache/site/
+          if-no-files-found: error
+          retention-days: 14
+
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container: rust:1.100-trixie@sha256:223cc32ddca8f3ee90c436dbc94b6b5f052ea7f9653c5201e9612f08ad7d21b8
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo registry, git deps and test target dir
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/cargo/registry
+            /usr/local/cargo/git
+            target
+          key: editor-test-${{ hashFiles('Cargo.lock', 'greenfield/test.sh') }}
+          restore-keys: editor-test-
+
+      # One cargo invocation at a time (test.sh): a fat-LTO link next to cargo test was SIGKILLed.
+      # Skips are named in greenfield/test-skips.txt.
+      - name: Rust tests of the crates our commits touch
+        run: greenfield/test.sh
+
+  release:
+    # Only main. Needs the build job's artifact; a pull request or branch push never publishes.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build, test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: Cargo.toml
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: editor-site
+          path: site
+
+      - name: Zip the site (site at the zip root, sorted, fixed timestamps) and publish the release
+        run: |
+          tag="editor-${GITHUB_SHA::12}"
+          # The pin's "version" is the editor's reported appVersion (the workspace version), not
+          # the release tag: the bridge asserts info.appVersion === EDITOR_VERSION.
+          app_version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
+          [[ -n "$app_version" ]] || { echo "no workspace version in Cargo.toml" >&2; exit 1; }
+          zip_name="greenfield-editor-${GITHUB_SHA::12}.zip"
+          (cd site && find . -type f | LC_ALL=C sort | sed 's|^\./||' | TZ=UTC zip -X -q -@ "../$zip_name")
+          sha="$(sha256sum "$zip_name" | cut -d' ' -f1)"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # A re-run: keep the published asset, whose bytes differ from this fresh zip.
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" -p "$zip_name" --clobber
+            sha="$(sha256sum "$zip_name" | cut -d' ' -f1)"
+          else
+            gh release create "$tag" "$zip_name" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "Editor build ${GITHUB_SHA::12}" \
+              --notes "Greenfield editor build of $GITHUB_SHA (pinned toolchain, size gate and marks check passed).
+
+          Asset: $zip_name
+          sha256: $sha"
+          fi
+          {
+            echo "### Editor release $tag"
+            echo "Asset \`$zip_name\`, sha256 \`$sha\`. Pin it in greenfield's \`packages/bridge/editor-release.json\`, then run \`pnpm --filter @greenfield/bridge generate\`:"
+            # shellcheck disable=SC2016 # literal backticks for the markdown fence
+            printf '```json\n{ "version": "%s", "url": "%s", "sha256": "%s" }\n```\n' "$app_version" "https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/$zip_name" "$sha"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
