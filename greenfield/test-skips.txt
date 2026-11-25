@@ -1,0 +1,2 @@
+# Tests that fail on upstream v0.18.1 itself, one cargo test name per line (cargo --skip substring).
+# Each needs a comment saying why. Empty means none are known.

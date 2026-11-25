@@ -1,0 +1,5 @@
+# Allowlist for check-marks.sh: <path regex><TAB><match regex>. A hit is skipped when both match.
+# The engine command catalog keeps upstream text: the bridge pins its hash (COMMANDS_HASH), and
+# the menu shows the English [commands] entry instead. Licence files are copied after the check.
+crates/engine/src/(catalog|cmd/view|cmd/file|sharing/invite_links)\.rs	.
+\.wasm$	About FigCraft|: FigCraft or REST|vite links in FigCraft
