@@ -10,7 +10,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub const UPDATE_APP: craft_update::app::App = craft_update::app::App {
     icon_png: Some(include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.figcraft.png")),
-    accent: Some([0x02, 0xda, 0x96]),
+    accent: Some([0x3f, 0xd6, 0x7f]),
     ..craft_update::suite::FIGCRAFT
 };
 

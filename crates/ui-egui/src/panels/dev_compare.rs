@@ -351,7 +351,7 @@ pub(crate) fn images(ui: &mut Ui, t: &Tokens, r: Rect, shots: [(&Shot, &str); 2]
             if resp.hovered() || resp.dragged() {
                 ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
             }
-            p.line_segment([pos2(split_x, img.min.y), pos2(split_x, img.max.y)], Stroke::new(2.0, ACCENT));
+            p.line_segment([pos2(split_x, img.min.y), pos2(split_x, img.max.y)], Stroke::new(2.0, crate::theme::accent()));
             let knob = pos2(split_x, img.center().y);
             p.circle_filled(knob, 10.0, ACCENT);
             crate::icons::paint(&p, Rect::from_center_size(knob, vec2(12.0, 12.0)), Icon::DistributeH, Color32::WHITE);

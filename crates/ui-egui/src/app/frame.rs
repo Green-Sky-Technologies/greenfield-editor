@@ -150,7 +150,7 @@ impl FigApp {
         let resp = ui.interact(rect, id, egui::Sense::CLICK | egui::Sense::DRAG);
         if resp.hovered() || resp.dragged() {
             ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
-            ui.painter().vline(x, rows, egui::Stroke::new(2.0, theme::ACCENT));
+            ui.painter().vline(x, rows, egui::Stroke::new(2.0, theme::accent()));
         }
         if resp.double_clicked() {
             return Some(PANEL_DEFAULT);

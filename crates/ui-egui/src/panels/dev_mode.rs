@@ -253,7 +253,7 @@ impl Callout {
     fn paint(self, painter: &egui::Painter, t: &Tokens, rect: Rect, color: Color32, pinned: &[(&Pinnable, Option<Prop>)], selected: bool) {
         painter.add(egui::epaint::Shadow { offset: [0, 2], blur: 8, spread: 0, color: t.shadow }.as_shape(rect, CornerRadius::same(6)));
         painter.rect_filled(rect, CornerRadius::same(6), t.panel);
-        painter.rect_stroke(rect, CornerRadius::same(6), Stroke::new(1.0, if selected { ACCENT } else { t.border_strong }), StrokeKind::Inside);
+        painter.rect_stroke(rect, CornerRadius::same(6), Stroke::new(1.0, if selected { crate::theme::accent() } else { t.border_strong }), StrokeKind::Inside);
         painter.rect_filled(Rect::from_min_size(rect.min + vec2(0.0, 6.0), vec2(3.0, rect.height() - 12.0)), CornerRadius::same(2), color);
         let x = rect.min.x + 12.0;
         let mut y = rect.min.y + 8.0;
@@ -899,7 +899,7 @@ pub fn categories_section(app: &mut FigApp, ui: &mut Ui) {
                     let (cr, resp) = ui.allocate_exact_size(vec2(18.0, 18.0), Sense::click());
                     ui.painter().rect_filled(cr, CornerRadius::same(4), doc_c32(ui.ctx(), col));
                     if col.to_hex() == c.color.to_hex() {
-                        ui.painter().rect_stroke(cr.expand(2.0), CornerRadius::same(5), Stroke::new(1.5, ACCENT), StrokeKind::Inside);
+                        ui.painter().rect_stroke(cr.expand(2.0), CornerRadius::same(5), Stroke::new(1.5, crate::theme::accent()), StrokeKind::Inside);
                     }
                     if resp.clicked() {
                         action = Some(("annotation.editCategory", json!({"id": c.id, "color": col.to_css_hex()})));

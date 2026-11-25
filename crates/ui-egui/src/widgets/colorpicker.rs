@@ -870,7 +870,7 @@ fn gradient_controls(
         ui.painter().rect_stroke(
             r,
             CornerRadius::same(3),
-            Stroke::new(if i == sel { 2.0 } else { 1.0 }, if i == sel { crate::theme::ACCENT } else { Color32::WHITE }),
+            Stroke::new(if i == sel { 2.0 } else { 1.0 }, if i == sel { crate::theme::accent() } else { Color32::WHITE }),
             StrokeKind::Outside,
         );
         if resp.clicked() || resp.drag_started() {

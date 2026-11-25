@@ -781,7 +781,7 @@ fn message(
                         },
                     );
                     if on {
-                        ui.painter().rect_stroke(rect, cr, Stroke::new(1.0, ACCENT), StrokeKind::Inside);
+                        ui.painter().rect_stroke(rect, cr, Stroke::new(1.0, crate::theme::accent()), StrokeKind::Inside);
                     }
                     ui.painter().galley(rect.center() - galley.size() / 2.0, galley, t.text);
                     if resp.on_hover_text(r.users.join(", ")).clicked() {

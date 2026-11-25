@@ -287,7 +287,7 @@ fn pages(app: &mut FigApp, ui: &mut Ui) {
                 // The gap between rows counts too.
                 && pointer.is_some_and(|p| resp.interact_rect.expand2(vec2(0.0, 3.0)).contains(p))
             {
-                ui.painter().rect_stroke(r, CornerRadius::same(5), Stroke::new(2.0, ACCENT), egui::StrokeKind::Inside);
+                ui.painter().rect_stroke(r, CornerRadius::same(5), Stroke::new(2.0, crate::theme::accent()), egui::StrokeKind::Inside);
                 if ui.input(|i| i.pointer.any_released()) {
                     move_to = Some((id, name.clone()));
                 }
@@ -415,7 +415,7 @@ fn pages_edge(app: &mut FigApp, ui: &mut Ui, shown: f32) {
     if active {
         ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeVertical);
     }
-    let (width, colour) = if active { (2.0, ACCENT) } else { (1.0, t.border) };
+    let (width, colour) = if active { (2.0, crate::theme::accent()) } else { (1.0, t.border) };
     ui.painter().line_segment([line.left_center(), line.right_center()], Stroke::new(width, colour));
     let asked = if resp.double_clicked() {
         Some(None)
@@ -841,7 +841,7 @@ fn drop_zone(ui: &mut Ui, p: egui::Pos2, rects: [Rect; 2], x0: f32, id: NodeId, 
         _ => r.center().y,
     };
     if zone == 0 {
-        ui.painter().rect_stroke(rr, CornerRadius::same(5), Stroke::new(2.0, ACCENT), egui::StrokeKind::Inside);
+        ui.painter().rect_stroke(rr, CornerRadius::same(5), Stroke::new(2.0, crate::theme::accent()), egui::StrokeKind::Inside);
         // Holding over a collapsed group or frame opens it, to drop deeper inside.
         if collapsed {
             open = hold_opens(ui, id);
@@ -1069,7 +1069,7 @@ fn paint_row_bg(ui: &Ui, t: &Tokens, rr: Rect, state: [bool; 3], hovered: bool) 
     if selected {
         ui.painter().rect_filled(rr, CornerRadius::same(5), if is_comp { t.component_row } else { t.selected_row });
     } else if !in_selected && hovered {
-        ui.painter().rect_stroke(rr, CornerRadius::same(5), Stroke::new(1.0, if is_comp { t.component } else { ACCENT }), egui::StrokeKind::Inside);
+        ui.painter().rect_stroke(rr, CornerRadius::same(5), Stroke::new(1.0, if is_comp { t.component } else { crate::theme::accent() }), egui::StrokeKind::Inside);
     }
 }
 

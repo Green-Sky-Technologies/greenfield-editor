@@ -618,7 +618,7 @@ fn interactions(app: &mut FigApp, ui: &mut Ui, doc: &Document, page: NodeId, nod
         }
         // A small connection glyph.
         let g = pos2(body.min.x + 14.0, body.center().y);
-        ui.painter().circle_stroke(g, 5.0, Stroke::new(1.2, ACCENT));
+        ui.painter().circle_stroke(g, 5.0, Stroke::new(1.2, crate::theme::accent()));
         ui.painter().circle_filled(g, 2.0, ACCENT);
         let tx = body.min.x + 28.0;
         let clip = ui.painter().with_clip_rect(body);
@@ -791,7 +791,7 @@ fn trigger_rows(app: &mut FigApp, ui: &mut Ui, node: NodeId, k: usize, it: &Inte
                 let id = capture_id().with("field");
                 ui.painter().rect_filled(r, CornerRadius::same(5), t.field);
                 if cap {
-                    ui.painter().rect_stroke(r, CornerRadius::same(5), Stroke::new(1.0, ACCENT), StrokeKind::Inside);
+                    ui.painter().rect_stroke(r, CornerRadius::same(5), Stroke::new(1.0, crate::theme::accent()), StrokeKind::Inside);
                     ui.memory_mut(|m| m.request_focus(id));
                     let _ = ui.interact(r, id, Sense::focusable_noninteractive());
                     let pressed = ui.input(|i| {
