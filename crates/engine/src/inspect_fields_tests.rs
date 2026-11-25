@@ -505,3 +505,14 @@ fn node_get_uses_options_but_keeps_its_existing_depth_and_selection() {
     assert_eq!(s.selection(), selection);
     assert_eq!(s.undo_depth(), history);
 }
+
+#[test]
+fn variable_modes_are_read_back() {
+    let (mut s, frame, text) = tree();
+    run(&mut s, "node.set", json!({"ids": [frame], "props": {"variableModes": {"VariableCollectionId:1:4": "1:91"}}}));
+    let got = run(&mut s, "node.get", json!({"id": frame}));
+    assert_eq!(got["variableModes"], json!({"VariableCollectionId:1:4": "1:91"}));
+    let only = run(&mut s, "node.get", json!({"id": frame, "fields": ["variableModes"]}));
+    keys(&only, &["id", "variableModes", "children", "childCount"]);
+    assert!(run(&mut s, "node.get", json!({"id": text})).get("variableModes").is_none(), "a layer with none says nothing");
+}
