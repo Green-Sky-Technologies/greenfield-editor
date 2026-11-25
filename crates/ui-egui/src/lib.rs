@@ -9,7 +9,7 @@
 /// prompt shows both, and an AppImage's menu entry gets the icon.
 #[cfg(not(target_arch = "wasm32"))]
 pub const UPDATE_APP: craft_update::app::App = craft_update::app::App {
-    icon_png: Some(include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.figcraft.png")),
+    icon_png: Some(include_bytes!("../../../assets/app-icon/greenfield-128.png")),
     accent: Some([0x3f, 0xd6, 0x7f]),
     ..craft_update::suite::FIGCRAFT
 };
@@ -20,6 +20,7 @@ pub mod canvas;
 pub mod cjk;
 pub mod control;
 pub mod dialogs;
+mod greenfield_mark;
 pub mod home;
 pub mod i18n;
 pub mod icons;

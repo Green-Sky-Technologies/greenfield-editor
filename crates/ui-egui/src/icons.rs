@@ -180,7 +180,6 @@ icons! {
     /// The prototype preview pane: a small window playing a frame.
     Preview,
     Section2,
-    Logo,
     /// Ignore auto layout: a layer pinned at an offset inside its frame.
     AbsolutePosition,
     /// A component slot: a dashed frame with a plus, a place that takes any content.

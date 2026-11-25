@@ -299,7 +299,8 @@ fn english_text_is_its_key_except_plurals() {
             assert_eq!(k.split('|').next(), Some(*s), "an English entry differs from its key (the key is the English text)");
         }
     }
-    assert!(english().commands.is_empty() && english().menu.is_empty(), "English command labels come from the engine");
+    // Greenfield renames two: the engine catalog keeps upstream's text (the bridge pins its hash).
+    assert!(english().commands.iter().all(|(id, _)| matches!(*id, "help.about" | "collab.registerLinks")) && english().menu.is_empty(), "English command labels come from the engine");
 }
 
 /// The ids `[commands]` entries translate: every command and every main-menu item.

@@ -90,7 +90,7 @@ pub fn rail(app: &mut FigApp, ui: &mut Ui) {
     if lresp.hovered() || app.ui.main_menu {
         ui.painter().rect_filled(lr, CornerRadius::same(6), t.hover);
     }
-    icons::paint(ui.painter(), Rect::from_center_size(lr.center(), vec2(18.0, 18.0)), Icon::Logo, t.icon);
+    crate::theme::paint_mark(ui.painter(), Rect::from_center_size(lr.center(), vec2(16.0, 16.0)), &t);
     if lresp.clicked() {
         app.ui.main_menu = !app.ui.main_menu;
     }

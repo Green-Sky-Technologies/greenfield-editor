@@ -50,11 +50,11 @@ const ISSUES: &str = "https://github.com/storytold/figcraft/issues";
 pub fn window_failed(error: &str, backend_set: bool, tried: Option<&str>) -> String {
     let hint = if let Some(apis) = tried {
         trf(
-            "FigCraft tried {apis}, then again with lower requirements on the power-saving GPU. Updating the graphics driver often helps.",
+            "Greenfield tried {apis}, then again with lower requirements on the power-saving GPU. Updating the graphics driver often helps.",
             &[("apis", &apis)],
         )
     } else if backend_set {
-        tr("WGPU_BACKEND is set and names the graphics API to use; unsetting it lets FigCraft choose.").to_string()
+        tr("WGPU_BACKEND is set and names the graphics API to use; unsetting it lets Greenfield choose.").to_string()
     } else if cfg!(windows) {
         // Direct3D 12 and OpenGL are both offered, but wgpu keeps the Direct3D 12 adapter it picked
         // even when its device then fails, so naming OpenGL alone can still help.
@@ -63,7 +63,7 @@ pub fn window_failed(error: &str, backend_set: bool, tried: Option<&str>) -> Str
 
 set WGPU_BACKEND=gl
 figcraft.exe",
-            tr("Updating the graphics driver often helps. To use OpenGL only, start FigCraft from a Command Prompt with:")
+            tr("Updating the graphics driver often helps. To use OpenGL only, start Greenfield from a Command Prompt with:")
         )
     } else {
         tr("Updating the graphics driver often helps. WGPU_BACKEND (vulkan, gl, metal) names another graphics API to try.").to_string()
@@ -74,7 +74,7 @@ figcraft.exe",
 {hint}
 
 {}",
-        trf("FigCraft couldn't open its window: {error}", &[("error", &error)]),
+        trf("Greenfield couldn't open its window: {error}", &[("error", &error)]),
         trf("If it keeps happening, please report it at {link} with this message.", &[("link", &ISSUES)])
     )
 }
@@ -151,16 +151,11 @@ fn about_body(ui: &mut egui::Ui, t: &Tokens) {
         });
     });
     ui.add_space(12.0);
-    ui.label(tr(
-        "Interface design and prototyping. A free, open-source, clean-room design tool written from scratch in Rust, part of the ArtCraft Crafting Apps.",
-    ));
+    ui.label(tr("Interface design and prototyping. A free, open-source design tool."));
     ui.add_space(8.0);
-    ui.hyperlink_to("getartcraft.com/apps/figcraft", "https://getartcraft.com/apps/figcraft");
-    ui.hyperlink_to(tr("Join us on Discord"), "https://discord.gg/artcraft");
+    ui.hyperlink_to("github.com/Green-Sky-Technologies/greenfield", "https://github.com/Green-Sky-Technologies/greenfield");
     ui.add_space(8.0);
-    ui.label(
-        RichText::new(tr("Dual-licensed MIT OR Apache-2.0. Made by the ArtCraft team and community.")).color(t.text_secondary).font(regular(11.0)),
-    );
+    ui.label(RichText::new(tr("Built on open-source software under MIT OR Apache-2.0. The licence texts ship with the editor.")).color(t.text_secondary).font(regular(11.0)));
 }
 
 /// Escape closes the topmost simple dialog (one without menus of its own), before the canvas's
@@ -219,7 +214,7 @@ pub fn show(app: &mut FigApp, ctx: &Context) {
     let t = Tokens::get(ctx);
     if app.ui.about {
         let mut open = true;
-        window(tr("About FigCraft"), ctx).open(&mut open).show(ctx, |ui| {
+        window(tr("About Greenfield"), ctx).open(&mut open).show(ctx, |ui| {
             ui.set_width(ABOUT_WIDTH);
             tab_strip(ui, &t, &AboutTab::ALL, AboutTab::label, &mut app.ui.about_tab);
             ui.add_space(12.0);
@@ -267,7 +262,7 @@ pub fn show(app: &mut FigApp, ctx: &Context) {
             }
             // Where the app registers itself as the opener of invite links (Windows).
             if let Some(on) = app.session.invite_links_on() {
-                if crate::widgets::checkbox(ui, on, tr("Open invite links in FigCraft")) {
+                if crate::widgets::checkbox(ui, on, tr("Open invite links in Greenfield")) {
                     app.run("collab.registerLinks", json!({"on": !on}));
                 }
                 crate::widgets::label(
@@ -291,7 +286,7 @@ pub fn show(app: &mut FigApp, ctx: &Context) {
                     app.run("pref.publishServer", json!({"url": url}));
                 }
                 let usual = prefs.publish_server == figcraft_engine::live::DEFAULT_SERVER;
-                if crate::widgets::button(ui, tr("Reset"), false, !usual).on_hover_text(tr("Back to the FigCraft server")).clicked() {
+                if crate::widgets::button(ui, tr("Reset"), false, !usual).on_hover_text(tr("Back to the Greenfield server")).clicked() {
                     app.run("pref.publishServer", json!({}));
                 }
             });
