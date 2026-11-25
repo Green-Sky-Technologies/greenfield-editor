@@ -25,7 +25,7 @@ pub const MAX_LAYERS: usize = 500;
 /// An attached AI agent at work.
 #[derive(Clone, Debug, PartialEq)]
 pub struct AgentPresence {
-    /// As its comments are signed ("Claude (agent)").
+    /// As its client named it ("Claude"; [`crate::cmd::comment::agent_name`]).
     pub name: String,
     /// The file it last worked in (`DocState::uid`).
     pub doc: u64,
@@ -88,12 +88,12 @@ impl Session {
     /// The running command is the agent's: it is at work, on what it just edited or selected
     /// (else on what it worked on before in the same file). While the host holds it for a turn, it
     /// is on every layer the turn's commands edited that is still there.
-    pub(crate) fn note_agent(&mut self, before: Option<Before>) {
-        if self.agent.is_none() || self.ds().is_err() {
+    pub(crate) fn note_agent(&mut self, name: String, before: Option<Before>) {
+        if self.ds().is_err() {
             return;
         }
         self.agent_runs += 1;
-        let (Some(name), Ok(ds)) = (self.agent.clone(), self.ds()) else { return };
+        let Ok(ds) = self.ds() else { return };
         let (uid, doc) = (ds.uid, ds.doc.clone());
         let now = before.filter(|b| b.0 == uid).and_then(|(_, before, sel)| touched(&before, &doc, &sel, &ds.selection));
         let kept = self.agent_presence.take().filter(|p| p.doc == uid && p.name == name);
@@ -120,7 +120,7 @@ impl Session {
     /// (`active`), or lets go of it (it then lingers from now, as after a command). Another agent's
     /// presence is not touched by a release.
     pub fn hold_agent(&mut self, name: &str, active: bool) -> crate::Result<Value> {
-        let name = crate::cmd::comment::agent_author(name);
+        let name = crate::cmd::comment::agent_name(name);
         let uid = self.ds()?.uid;
         let now = Instant::now();
         let (mine, other) = match self.agent_presence.take() {

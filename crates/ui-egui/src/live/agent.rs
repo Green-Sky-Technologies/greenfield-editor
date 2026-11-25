@@ -115,7 +115,7 @@ mod tests {
         rect(&mut u, Some("Claude"));
         let first = presence_events(&mut u);
         assert_eq!(first.len(), 1, "{first:?}");
-        assert_eq!((first[0]["active"].clone(), first[0]["name"].clone(), first[0]["held"].clone()), (json!(true), json!("Claude (agent)"), json!(false)));
+        assert_eq!((first[0]["active"].clone(), first[0]["name"].clone(), first[0]["held"].clone()), (json!(true), json!("Claude"), json!(false)));
         let layer = first[0]["layers"][0].as_u64().unwrap();
         u.frames(3, Vec::new);
         assert!(presence_events(&mut u).is_empty(), "no news is no event");
@@ -131,7 +131,7 @@ mod tests {
         u.app.session.agent_presence.as_mut().unwrap().at = at - std::time::Duration::from_secs(9);
         u.frames(2, Vec::new);
         let gone = presence_events(&mut u);
-        assert_eq!(gone, vec![json!({"active": false, "name": "Claude (agent)", "held": false, "layers": []})]);
+        assert_eq!(gone, vec![json!({"active": false, "name": "Claude", "held": false, "layers": []})]);
     }
 
     #[test]
@@ -174,7 +174,7 @@ mod tests {
         assert!(shown(&u.app, &u.ctx).is_none(), "the control channel's own calls are the user's");
         rect(&mut u, Some("Claude"));
         let p = shown(&u.app, &u.ctx).expect("the agent shows");
-        assert_eq!((p.name.as_str(), p.layers.len()), ("Claude (agent)", 1));
+        assert_eq!((p.name.as_str(), p.layers.len()), ("Claude", 1));
         u.run("file.new", json!({}));
         assert!(shown(&u.app, &u.ctx).is_none(), "another file in front shows no agent");
     }

@@ -22,8 +22,8 @@ to 60 s over each request; `--timeout SECONDS` (1–600) raises that for a clien
 batches: `figcraft-cli mcp --attach 7979 --timeout 300`. Headless has no such limit.
 
 While an attached agent works, the app shows where, as it shows a person in a live session: its
-avatar, in a colour of its own and named as its comments are signed ("Claude (agent)", see
-Comments), joins the people row at the top of the right panel, and the canvas outlines the layers
+avatar, in a colour of its own and named as its client is ("Claude"; its comments are signed
+"Claude (agent)", see Comments), joins the people row at the top of the right panel, and the canvas outlines the layers
 its last edit changed, or that it last selected, with its name. Both go 8 seconds after its last
 command, and only the file it works in shows them. This is display only: no undo step, nothing
 saved, nothing sent to a live session's other people, and nothing changes in what the agent may

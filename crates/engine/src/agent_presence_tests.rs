@@ -23,7 +23,7 @@ fn an_agents_edit_shows_it_on_the_layers_it_changed() {
     let f = id(&s.execute("frame.create", &json!({"x": 0, "y": 0, "width": 300, "height": 200})).unwrap());
     let r = id(&s.execute_as(Some("Claude"), "shape.rectangle", &json!({"parent": f, "x": 10, "y": 10, "width": 40, "height": 40})).unwrap());
     let p = s.agent_presence.clone().expect("the agent is at work");
-    assert_eq!(p.name, "Claude (agent)");
+    assert_eq!(p.name, "Claude");
     assert_eq!(p.doc, s.ds().unwrap().uid);
     assert_eq!(p.layers, vec![r], "the new layer, not the frame whose children changed with it");
     assert_eq!(s.agent, None, "the command ran as the agent only");
@@ -50,9 +50,9 @@ fn an_agents_selection_shows_it_there_and_a_look_keeps_it() {
 fn a_held_presence_outlasts_the_linger_and_lingers_once_released() {
     let mut s = Session::new();
     let r = rect(&mut s, None, 0);
-    assert_eq!(s.execute("agent.presence", &json!({"name": "Claude", "active": true})).unwrap(), json!({"name": "Claude (agent)", "active": true}));
+    assert_eq!(s.execute("agent.presence", &json!({"name": "Claude", "active": true})).unwrap(), json!({"name": "Claude", "active": true}));
     let held = s.agent_presence.clone().unwrap();
-    assert!((held.name.as_str(), held.held, held.doc) == ("Claude (agent)", true, s.ds().unwrap().uid));
+    assert!((held.name.as_str(), held.held, held.doc) == ("Claude", true, s.ds().unwrap().uid));
     let a_minute_on = held.at + Duration::from_secs(60);
     assert!(s.agent_presence_at(a_minute_on).is_some(), "a quiet agent still shows while the host holds it");
 
@@ -76,11 +76,11 @@ fn releasing_leaves_another_agents_presence_alone_and_needs_its_parameters() {
     let mut s = Session::new();
     rect(&mut s, Some("Codex"), 0);
     s.execute("agent.presence", &json!({"name": "Claude", "active": false})).unwrap();
-    assert_eq!(s.agent_presence.as_ref().unwrap().name, "Codex (agent)", "Claude never had it");
+    assert_eq!(s.agent_presence.as_ref().unwrap().name, "Codex", "Claude never had it");
     assert!(s.execute("agent.presence", &json!({"name": "Claude"})).is_err(), "active is required");
     assert!(s.execute("agent.presence", &json!({"active": true})).is_err(), "so is the name");
     s.execute("agent.presence", &json!({"name": "Claude", "active": true})).unwrap();
-    assert_eq!(s.agent_presence.as_ref().unwrap().name, "Claude (agent)", "holding another agent replaces it");
+    assert_eq!(s.agent_presence.as_ref().unwrap().name, "Claude", "holding another agent replaces it");
 }
 
 #[test]
@@ -98,7 +98,7 @@ fn a_batch_run_as_an_agent_shows_the_agent_on_what_its_steps_edited() {
         .unwrap();
     let ids: Vec<NodeId> = out.as_array().unwrap().iter().map(id).collect();
     let p = s.agent_presence.clone().expect("the batch ran as the agent");
-    assert_eq!(p.name, "Claude (agent)");
+    assert_eq!(p.name, "Claude");
     assert_eq!(p.layers, ids, "both steps' layers");
     assert_eq!(s.agent, None);
 }

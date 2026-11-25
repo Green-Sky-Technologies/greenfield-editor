@@ -9,7 +9,7 @@
 //! - `document.changed {document, revision, undoDepth, agent, resync, nodes, added, removed, moved}`:
 //!   the layers or their properties changed (an edit, undo, redo, or a gesture's preview, so a scrub
 //!   sends one per frame). Panning and zooming don't; `revision` is `document.inspect`'s, which does
-//!   move with them. `agent` names the AI agent (`"Claude (agent)"`) when one ran a command in the
+//!   move with them. `agent` names the AI agent (`"Claude"`) when one ran a command in the
 //!   frame (`executeAs`, `engine.execute` with `agent`), else `null`.
 //!   - `nodes`: `{id, ...fields}` for each layer added or changed: an added layer's every field, a
 //!     changed one's fields that differ (`null` for a field it no longer has, such as `opacity` back

@@ -61,9 +61,9 @@ impl Session {
         let was = std::mem::replace(&mut self.agent, agent.map(cmd::comment::agent_author));
         let before = agent.and_then(|_| self.agent_before());
         let r = self.execute(id, params);
-        if agent.is_some() {
+        if let Some(name) = agent {
             let users = before.as_ref().map(|(uid, _, sel)| (*uid, sel.clone()));
-            self.note_agent(before);
+            self.note_agent(cmd::comment::agent_name(name), before);
             if let Some((uid, sel)) = users {
                 self.restore_selection(uid, sel);
             }
