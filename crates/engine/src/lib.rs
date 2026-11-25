@@ -162,6 +162,9 @@ pub struct Session {
     pub agent: Option<String>,
     /// Where an attached AI agent last worked ([`Session::agent_presence_at`]): display only.
     pub agent_presence: Option<agent::AgentPresence>,
+    /// The file a gesture started with `edit.begin` is in ([`cmd::gesture`]), until `edit.commit` or
+    /// `edit.cancel`. The editor's own gestures (a drag, the pen) don't set it.
+    pub(crate) gesture_cmd: Option<u64>,
 }
 
 impl Default for Session {
@@ -172,6 +175,8 @@ impl Default for Session {
 
 #[cfg(test)]
 mod a11y_keys_tests;
+#[cfg(test)]
+mod gesture_command_tests;
 #[cfg(test)]
 mod agent_presence_tests;
 #[cfg(test)]

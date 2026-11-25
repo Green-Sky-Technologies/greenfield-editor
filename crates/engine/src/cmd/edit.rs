@@ -107,8 +107,14 @@ fn node_find(s: &mut Session, p: &Value) -> Result<Value> {
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
-        spec!("edit.undo", "Undo", "{}", false, |s, _| Ok(json!({"undone": s.undo()?}))),
-        spec!("edit.redo", "Redo", "{}", false, |s, _| Ok(json!({"redone": s.redo()?}))),
+        spec!("edit.undo", "Undo", "{}", false, |s, _| {
+            super::gesture::refuse_during_gesture(s, "edit.undo")?;
+            Ok(json!({"undone": s.undo()?}))
+        }),
+        spec!("edit.redo", "Redo", "{}", false, |s, _| {
+            super::gesture::refuse_during_gesture(s, "edit.redo")?;
+            Ok(json!({"redone": s.redo()?}))
+        }),
         spec!("edit.delete", "Delete", "{ids?}", true, delete),
         spec!(
             "edit.duplicate",
