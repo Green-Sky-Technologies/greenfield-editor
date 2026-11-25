@@ -338,6 +338,16 @@ pub fn specs() -> Vec<CommandSpec> {
             false,
             |s, p| flag(s, p, |v| &mut v.ui_minimized)
         ),
+        spec!(
+            "view.canvasMode",
+            "Canvas mode",
+            "{on?}  draw only the canvas and its overlays: no navigation bar, sidebars, tab bar, toolbar, home screen or menus. Right-clicks, dialogs, popovers and the Comment tool's click go to the host as `ui.request` events (`?canvas` on the page starts in it). Off brings the editor's own panels back",
+            false,
+            |s, p| {
+                s.request_ui("canvas.mode", json!({"on": boolean(p, "on")}));
+                ok()
+            }
+        ),
         spec!("view.fullscreen", "Full screen", "{on?}  the window fills the screen (the desktop app; a no-op headless)", false, |s, p| {
             s.request_ui("window.fullscreen", json!({"on": boolean(p, "on")}));
             ok()

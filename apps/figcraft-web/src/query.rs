@@ -25,6 +25,17 @@ pub fn page_server(content: &str) -> Option<String> {
     (scheme && c.len() <= 512 && !c.contains(|ch: char| ch.is_whitespace() || ch.is_control() || ch == '?' || ch == '#')).then(|| c.to_string())
 }
 
+/// Whether `search` (`location.search`, with or without its `?`) has a `canvas` entry (`?canvas`, or
+/// `?canvas=…` with any value but `0` or `false`): the page starts in canvas mode, the editor drawing
+/// only the canvas for a host page that draws the rest.
+pub fn canvas(search: &str) -> bool {
+    let search = search.strip_prefix('?').unwrap_or(search);
+    search.split('&').any(|entry| {
+        let (key, value) = entry.split_once('=').unwrap_or((entry, ""));
+        key == "canvas" && !matches!(value, "0" | "false")
+    })
+}
+
 /// Whether `search` (`location.search`, with or without its `?`) has a `control` entry (`?control`,
 /// or `?control=…` with any value): the page's control channel, `window.figcraft`, is installed only
 /// when it is asked for.

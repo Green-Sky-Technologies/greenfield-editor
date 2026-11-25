@@ -101,6 +101,7 @@ impl FigApp {
             "lastError": self.ui.last_error,
             "importReport": self.ui.import_report.as_ref().map(import_report::Report::inspect),
         });
+        state["canvasMode"] = json!(self.ui.canvas_mode);
         state["homeSearch"] = json!(self.ui.home_view.file_query);
         state["panels"]["minimized"] = json!(self.session.ds().is_ok_and(|d| d.view.ui_minimized));
         // Set apart from the literal above, which is at the macro recursion limit.

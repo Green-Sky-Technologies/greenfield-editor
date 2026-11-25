@@ -61,6 +61,25 @@ pub enum PickerTarget {
     },
 }
 
+impl PickerTarget {
+    /// What the picker edits, as the host is told when it draws the picker in place of the editor
+    /// (canvas mode): the kind and, where it has them, the layers and the paint.
+    pub fn describe(&self) -> serde_json::Value {
+        use serde_json::json;
+        let ids = |ids: &[NodeId]| ids.iter().map(|i| i.0).collect::<Vec<_>>();
+        match self {
+            Self::PageBackground => json!({"target": "pageBackground"}),
+            Self::SelectionColor { selection, .. } => json!({"target": "selectionColor", "ids": ids(selection)}),
+            Self::Paint { fills, index, ids: i } => json!({"target": "paint", "slot": if *fills { "fill" } else { "stroke" }, "index": index, "ids": ids(i)}),
+            Self::Effect { ids: i, index, .. } => json!({"target": "effect", "index": index, "ids": ids(i)}),
+            Self::TextRange { id, start, end } => json!({"target": "textRange", "ids": [id.0], "start": start, "end": end}),
+            Self::Variable { id, mode } => json!({"target": "variable", "id": id, "mode": mode}),
+            Self::Style { id, index } => json!({"target": "style", "id": id, "index": index}),
+            Self::PluginField { plugin, control, .. } => json!({"target": "pluginField", "plugin": plugin, "control": control}),
+        }
+    }
+}
+
 /// The paints of colour style `id`.
 fn style_paints(doc: &figcraft_doc::Document, id: &str) -> Option<Vec<Paint>> {
     match &doc.style(id)?.kind {

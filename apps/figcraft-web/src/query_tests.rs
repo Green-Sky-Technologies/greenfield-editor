@@ -1,6 +1,6 @@
 //! `#join=` and `?control` in the page's URL, and the server the page names for itself.
 
-use crate::query::{control, join_link, page_server};
+use crate::query::{canvas, control, join_link, page_server};
 
 #[test]
 fn join_takes_the_rest_of_the_fragment() {
@@ -48,4 +48,13 @@ fn a_page_names_its_own_server_without_a_key() {
     {
         assert_eq!(page_server(bad), None, "{bad:?} is ignored");
     }
+}
+
+#[test]
+fn canvas_starts_canvas_mode() {
+    assert!(canvas("?canvas"));
+    assert!(canvas("?control&canvas"), "after other entries");
+    assert!(canvas("?canvas=1") && canvas("canvas"));
+    assert!(!canvas("?canvas=0") && !canvas("?canvas=false"), "off by name");
+    assert!(!canvas("") && !canvas("?canvascope") && !canvas("?nocanvas"), "only the whole entry name");
 }

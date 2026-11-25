@@ -120,7 +120,14 @@ impl FigApp {
     pub fn handle_ui_requests(&mut self) {
         let reqs = std::mem::take(&mut self.session.ui_requests);
         for r in reqs {
+            if self.divert_ui_request(&r.kind, &r.data) {
+                continue;
+            }
             match r.kind.as_str() {
+                "canvas.mode" => {
+                    let on = r.data.get("on").and_then(Value::as_bool).unwrap_or(!self.ui.canvas_mode);
+                    self.set_canvas_mode(on);
+                }
                 "dialog.about" => {
                     self.ui.about = true;
                     self.ui.about_tab = dialogs::AboutTab::About;

@@ -27,6 +27,11 @@
 //! - `figcraft:dirty` whenever unsaved changes appear or go away, `figcraft:failed` when the app
 //!   couldn't start.
 //!
+//! - `figcraft:event` (to the host): `{ name, data }` for what the host page draws or follows in canvas
+//!   mode: `ui.request` (a menu, popover or dialog the editor would have opened), `canvas.mode`, and
+//!   the events the app queues ([`figcraft_ui_egui::HostEvent`]). With `data-host="page"` it is a
+//!   `figcraft:event` `CustomEvent` on the canvas whose detail is `{ name, data }`.
+//!
 //! In host mode the app starts with no document (the home screen) and the host sends the file to
 //! edit; `?author=` names the user for comments and board notes.
 
@@ -49,6 +54,8 @@ pub type OpenQueue = Rc<RefCell<Vec<(String, Vec<u8>)>>>;
 #[derive(Clone)]
 pub struct Bridge {
     host: Rc<Host>,
+    /// The page's canvas: where `data-host="page"` events go.
+    canvas: web_sys::HtmlCanvasElement,
     /// The file the host opened, and after a `saveAs` hand-over the document's file: the name a
     /// Save under (`saveAs: false`) is decided against.
     host_file: Rc<RefCell<Option<String>>>,
@@ -59,7 +66,7 @@ impl Bridge {
     /// `data-host="page"` on the canvas, an unframed `?host=parent` page (it stays the normal app
     /// with downloads), or a parent on another origin.
     pub fn connect(canvas: &web_sys::HtmlCanvasElement) -> Option<Self> {
-        Some(Self { host: Rc::new(Host::connect(APP, canvas)?), host_file: Rc::default() })
+        Some(Self { host: Rc::new(Host::connect(APP, canvas)?), canvas: canvas.clone(), host_file: Rc::default() })
     }
 
     /// Hear the files the host sends, and queue each one on `opens` for the app's own open path
@@ -109,6 +116,36 @@ impl Bridge {
             *self.host_file.borrow_mut() = Some(name);
         }
         sent
+    }
+
+    /// Tell the host what happened or what the editor would have opened ([`figcraft_ui_egui::HostEvent`]).
+    /// `craft-web-host` has no generic message, so this sends `figcraft:event` the way its own are sent:
+    /// `postMessage` to the same-origin parent, or a `CustomEvent` on the canvas.
+    pub fn post_event(&self, name: &str, data: &serde_json::Value) {
+        if let Err(e) = self.send_event(name, data) {
+            log::warn!("couldn't post {name} to the host: {e:?}");
+        }
+    }
+
+    fn send_event(&self, name: &str, data: &serde_json::Value) -> Result<(), wasm_bindgen::JsValue> {
+        let data = js_sys::JSON::parse(&data.to_string())?;
+        let message = js_sys::Object::new();
+        js_sys::Reflect::set(&message, &"name".into(), &name.into())?;
+        js_sys::Reflect::set(&message, &"data".into(), &data)?;
+        match self.host.mode() {
+            craft_web_host::Mode::Parent => {
+                let window = web_sys::window().ok_or("no window")?;
+                let parent = window.parent()?.ok_or("no parent")?;
+                js_sys::Reflect::set(&message, &"type".into(), &"figcraft:event".into())?;
+                parent.post_message(&message, &window.location().origin()?)
+            }
+            craft_web_host::Mode::Page => {
+                let init = web_sys::CustomEventInit::new();
+                init.set_detail(&message);
+                let event = web_sys::CustomEvent::new_with_event_init_dict("figcraft:event", &init)?;
+                self.canvas.dispatch_event(&event).map(|_| ())
+            }
+        }
     }
 
     /// Report unsaved changes when they appear or go away, not every frame (the crate does not

@@ -415,6 +415,10 @@ pub fn open_context_menu(app: &mut FigApp, pos: Pos2, deep: bool) {
             app.session.set_selection(vec![target]);
         }
     }
+    if app.ui.canvas_mode {
+        let ids = app.session.selection();
+        return app.host_context_menu(pos, &ids);
+    }
     app.ui.context_menu = Some((pos, app.session.selection()));
     app.ui.context_menu_shown = false;
 }

@@ -35,7 +35,7 @@ impl FigApp {
     /// Clicking the control that opened the colour picker closes it again; clicking another opens
     /// the picker for that one.
     pub fn toggle_picker(&mut self, target: crate::colorpicker::PickerTarget, button: Option<egui::Rect>) {
-        if self.ui.picker.as_ref() == Some(&target) {
+        if self.ui.picker.as_ref() == Some(&target) && !self.ui.canvas_mode {
             crate::colorpicker::close(self);
         } else {
             self.open_picker(target, button);
@@ -44,6 +44,11 @@ impl FigApp {
 
     /// Start a fresh picker beside its control, committing edits to the previous target first.
     pub fn open_picker(&mut self, target: crate::colorpicker::PickerTarget, button: Option<egui::Rect>) {
+        // Canvas mode: the host draws the colour picker, beside the control that asked.
+        if self.ui.canvas_mode {
+            self.host_request("colorPicker", button.map(|r| r.left_bottom()), target.describe());
+            return;
+        }
         if self.ui.picker.is_some() {
             crate::colorpicker::close(self);
         }

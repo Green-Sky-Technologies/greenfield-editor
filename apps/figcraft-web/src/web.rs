@@ -73,6 +73,8 @@ pub fn start() {
                     let ctx = cc.egui_ctx.clone();
                     session.live.install(Box::new(figcraft_collab_net::NetLink::new(std::sync::Arc::new(move || ctx.request_repaint()))));
                     let mut fig = FigApp::new(session, Box::new(WebServices { reduce_motion, ctx: cc.egui_ctx.clone(), host: app_bridge.clone() }));
+                    // `?canvas`: the host page draws the chrome; the editor draws the canvas.
+                    fig.ui.canvas_mode = crate::query::canvas(&query());
                     fig.note_recovered(recovered);
                     if let Err(e) = crate::pasted::install(cc.egui_ctx.clone()) {
                         log::error!("couldn't listen for pasted images: {e:?}");
@@ -183,6 +185,18 @@ struct WebShell {
     opens: crate::host::OpenQueue,
 }
 
+impl WebShell {
+    /// What the app queued for the host this frame goes out now (dropped when the page has no host).
+    fn post_host_events(&mut self) {
+        let events = self.fig.take_host_events();
+        if let Some(bridge) = &self.host {
+            for e in events {
+                bridge.post_event(&e.name, &e.data);
+            }
+        }
+    }
+}
+
 impl eframe::App for WebShell {
     // eframe runs `logic` for visible tabs and, with only `run_logic`, for hidden ones: keep
     // autosave/live/control deadlines moving without a paint. `FigApp::ui` does not repeat it.
@@ -210,6 +224,7 @@ impl eframe::App for WebShell {
         if let Some(bridge) = &self.host {
             bridge.set_dirty(self.fig.session.docs.iter().any(|d| d.is_dirty()));
         }
+        self.post_host_events();
     }
 
     fn raw_input_hook(&mut self, ctx: &egui::Context, raw_input: &mut egui::RawInput) {
@@ -225,6 +240,7 @@ impl eframe::App for WebShell {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.fig.control_queue.extend(crate::api::take_requests());
         self.fig.ui(ui);
+        self.post_host_events();
         // The fonts on this computer that text asked for this frame are read; once one is in,
         // auto-sizing text measured in a fallback fits it.
         crate::local_fonts::load_wanted(ui.ctx());

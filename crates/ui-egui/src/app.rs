@@ -10,6 +10,7 @@ use super::{
 };
 
 mod clipboard;
+pub mod canvas_mode;
 mod commands;
 mod control;
 mod files;
@@ -249,7 +250,11 @@ impl FigApp {
         self.sync_dev_mode();
         self.end_pen_outside_design();
         tabs::relink_presents(self);
-        tabs::tab_bar(self, ui);
+        // Canvas mode draws no tab bar: the host's page has the tabs.
+        let canvas_mode = self.ui.canvas_mode;
+        if !canvas_mode {
+            tabs::tab_bar(self, ui);
+        }
         // Control/window work and this pass's physical tab click may have replaced the owner.
         // A shared field ID in that replacement must never consume the old commit marker.
         let field_save = shortcuts::revalidate_field_save(self, &ctx, field_save);
@@ -261,6 +266,17 @@ impl FigApp {
             dialogs::show(self, &ctx);
             updates_ui::show(self, &ctx);
             // What went wrong while presenting (a widget's plugin failing) shows over it.
+            self.toast_ui(&ctx);
+            windows::requests(self, &ctx);
+            shortcuts::clear_field_save_marker(&ctx);
+            self.observe_ime(&ctx, false);
+            return;
+        }
+        if canvas_mode && !self.has_files() {
+            // No home screen either: an empty canvas until the host opens a file.
+            egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.canvas)).show(ui, |_| {});
+            dialogs::keys(self, &ctx);
+            dialogs::show(self, &ctx);
             self.toast_ui(&ctx);
             windows::requests(self, &ctx);
             shortcuts::clear_field_save_marker(&ctx);
@@ -287,7 +303,8 @@ impl FigApp {
             self.observe_ime(&ctx, false);
             return;
         }
-        let hidden = self.session.ds().map(|d| d.view.ui_hidden).unwrap_or(false);
+        // Canvas mode hides everything Hide UI does: the canvas and its overlays are all there is.
+        let hidden = canvas_mode || self.session.ds().map(|d| d.view.ui_hidden).unwrap_or(false);
         // Minimized (Shift+Cmd/Ctrl+\, the Minimize button by the file name): "collapses the
         // navigation bar, left sidebar, and right sidebar"; "If you select an object while the
         // panels are minimized, the left sidebar remains minimized while the right sidebar expands

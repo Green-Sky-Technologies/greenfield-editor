@@ -363,6 +363,7 @@ use serde_json::{Value, json};
 pub use control::{ControlReply, ControlRequest, RequestGate, RequestState};
 
 mod app;
+pub use app::canvas_mode::HostEvent;
 mod clock;
 mod open;
 mod selection_cache;
@@ -569,6 +570,11 @@ pub struct UiState {
     /// The Rename layers dialog (several layers), while open.
     pub batch_rename: Option<dialogs::BatchRenameUi>,
     pub left_collapsed: bool,
+    /// Canvas mode: only the canvas and its overlays are drawn, and what would open a menu,
+    /// popover or dialog goes to the host ([`app::canvas_mode`]).
+    pub canvas_mode: bool,
+    /// Messages for the host page, drained every frame by the shell ([`FigApp::take_host_events`]).
+    pub host_events: Vec<HostEvent>,
     /// The side panel open in a narrow window (a phone), where only one shows at a time.
     pub mobile_panel: Option<MobilePanel>,
     /// The window was narrow (one side panel at a time) at the last frame.
@@ -725,6 +731,8 @@ impl Default for UiState {
             find: None,
             batch_rename: None,
             left_collapsed: false,
+            canvas_mode: false,
+            host_events: Vec::new(),
             mobile_panel: None,
             narrow: false,
             mirrored: false,
@@ -841,6 +849,9 @@ pub struct FigApp {
 
 /// What to do with the result of a command run in the background.
 pub type Done = Box<dyn FnOnce(&mut FigApp, &egui::Context, Value)>;
+
+#[cfg(test)]
+mod canvas_mode_tests;
 
 #[cfg(test)]
 mod selection_spacing_tests;

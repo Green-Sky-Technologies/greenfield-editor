@@ -31,6 +31,9 @@
 //! and stores what FigCraft saves. `&author=` names the user for comments and board notes in either
 //! host mode.
 //!
+//! `?canvas` starts the editor in canvas mode (`view.canvasMode`): only the canvas is drawn and the
+//! host page draws the rest; what would open a menu or dialog is posted to it as `figcraft:event`.
+//!
 //! URL fragment: `#join=<invite link or join code>` joins that live session once the page has
 //! loaded, so a bookmark opens a shared file. `join` takes the rest of the fragment: put it last.
 //! The link carries the session's secret; a fragment is never sent to the web host, but the address
