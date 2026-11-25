@@ -27,10 +27,18 @@ fn refuse_in_preview(command: &str) -> Result<()> {
 /// Undo and redo during a gesture of `edit.begin` would swap the document under it: refuse them
 /// until it ends. (The editor's own gestures, the pen's anchors among them, have their own rules.)
 pub(crate) fn refuse_during_gesture(s: &Session, id: &str) -> Result<()> {
-    if s.ds().is_ok_and(|d| s.gesture_cmd == Some(d.uid) && d.interaction.is_some()) {
+    if s.gesture_is_host() {
         return Err(EngineError::Disabled(id.to_string(), "finish the gesture first (edit.commit or edit.cancel)".into()));
     }
     Ok(())
+}
+
+impl Session {
+    /// The interaction open on the document in front was started with `edit.begin` (a host's
+    /// gesture), not by the canvas's own drag.
+    pub fn gesture_is_host(&self) -> bool {
+        self.ds().is_ok_and(|d| self.gesture_cmd == Some(d.uid) && d.interaction.is_some())
+    }
 }
 
 fn begin(s: &mut Session, p: &Value) -> Result<Value> {
