@@ -300,8 +300,10 @@ pub fn on_dark<R>(ui: &mut egui::Ui, f: impl FnOnce(&mut egui::Ui) -> R) -> R {
     r
 }
 
-/// UI fonts: Inter and the Archivo wordmark (from the craft-fonts build input) when present;
-/// otherwise egui's defaults. With
+/// UI fonts: IBM Plex Sans (400, 500, 600) and IBM Plex Mono (400, 500) for the chrome and
+/// Cormorant Garamond for the wordmark, all OFL-1.1 and embedded (`assets/fonts/`, Latin
+/// subsets); Inter from the craft-fonts build input and egui's defaults behind them for the glyphs
+/// they lack. With
 /// `system`, also system faces for scripts those lack (Hebrew, joined Arabic, Ethiopic, the Indic
 /// scripts and the others [`crate::bidi::script_fallbacks`] names) so names in them show,
 /// and faces for the CJK scripts in `cjk` ([`crate::cjk`]).
@@ -311,37 +313,42 @@ pub fn on_dark<R>(ui: &mut egui::Ui, f: impl FnOnce(&mut egui::Ui) -> R) -> R {
 pub fn install_fonts(ctx: &Context, system: bool, cjk: u8) {
     let mut fonts = FontDefinitions::default();
     let find = |family: &str, style: &str| figcraft_text::CRAFT_FONTS.iter().find(|f| f.family == family && f.style == style).map(|f| f.bytes);
-    let regular = find("Inter", "Regular");
-    let semibold = find("Inter", "SemiBold").or_else(|| find("Inter", "Bold"));
-    if let Some(r) = regular {
+    // Behind the Plex faces: Inter (broader Latin, Greek and Cyrillic), then egui's defaults.
+    if let Some(r) = find("Inter", "Regular") {
         fonts.font_data.insert("inter".into(), Arc::new(FontData::from_static(r)));
         if let Some(list) = fonts.families.get_mut(&FontFamily::Proportional) {
             list.insert(0, "inter".into());
         }
     }
-    let sb_name = if let Some(sb) = semibold {
-        fonts.font_data.insert("inter-semibold".into(), Arc::new(FontData::from_static(sb)));
-        "inter-semibold"
-    } else {
-        "inter"
-    };
-    let mut semi: Vec<String> = Vec::new();
-    if fonts.font_data.contains_key(sb_name) {
-        semi.push(sb_name.into());
+    let plex = |name: &str, bytes: &'static [u8]| (name.to_string(), Arc::new(FontData::from_static(bytes)));
+    let faces = [
+        plex("plex-sans-400", include_bytes!("../../../assets/fonts/IBMPlexSans-400.ttf")),
+        plex("plex-sans-500", include_bytes!("../../../assets/fonts/IBMPlexSans-500.ttf")),
+        plex("plex-sans-600", include_bytes!("../../../assets/fonts/IBMPlexSans-600.ttf")),
+        plex("plex-mono-400", include_bytes!("../../../assets/fonts/IBMPlexMono-400.ttf")),
+        plex("plex-mono-500", include_bytes!("../../../assets/fonts/IBMPlexMono-500.ttf")),
+        plex("cormorant-wordmark", include_bytes!("../../../assets/fonts/CormorantGaramond-400-wordmark.ttf")),
+    ];
+    for (name, data) in faces {
+        fonts.font_data.insert(name, data);
     }
-    semi.extend(fonts.families.get(&FontFamily::Proportional).cloned().unwrap_or_default());
-    fonts.families.insert(FontFamily::Name("semibold".into()), semi);
-    // Keep the logo's typeface independent of UI text. System Archivo is used when available;
-    // releases with craft-fonts embed it so the wordmark does not depend on installation.
-    let archivo = find("Archivo", "SemiBold").map(FontData::from_static).or_else(|| {
-        system.then(|| figcraft_text::find_face("Archivo", "SemiBold")).flatten().filter(|face| face.family == "Archivo").map(|face| font_data(&face))
-    });
-    let mut brand = Vec::new();
-    if let Some(data) = archivo {
-        fonts.font_data.insert("archivo".into(), Arc::new(data));
-        brand.push("archivo".into());
+    // Plex Sans 400 leads the proportional family; each weight is its own family, falling back to it.
+    if let Some(list) = fonts.families.get_mut(&FontFamily::Proportional) {
+        list.insert(0, "plex-sans-400".into());
     }
-    brand.extend(fonts.families.get(&FontFamily::Name("semibold".into())).cloned().unwrap_or_default());
+    let proportional = fonts.families.get(&FontFamily::Proportional).cloned().unwrap_or_default();
+    let weighted = |first: &str| std::iter::once(first.to_string()).chain(proportional.iter().cloned()).collect::<Vec<_>>();
+    fonts.families.insert(FontFamily::Name("medium".into()), weighted("plex-sans-500"));
+    fonts.families.insert(FontFamily::Name("semibold".into()), weighted("plex-sans-600"));
+    // Plex Mono leads the monospace family: numeric values, shortcuts, ids and the small caps labels.
+    if let Some(list) = fonts.families.get_mut(&FontFamily::Monospace) {
+        list.insert(0, "plex-mono-400".into());
+    }
+    let mono = fonts.families.get(&FontFamily::Monospace).cloned().unwrap_or_default();
+    fonts.families.insert(FontFamily::Name("mono-medium".into()), std::iter::once("plex-mono-500".to_string()).chain(mono).collect());
+    // The wordmark: Cormorant Garamond 400, then the semibold chain for any other character.
+    let brand = std::iter::once("cormorant-wordmark".to_string()).chain(fonts.families.get(&FontFamily::Name("semibold".into())).cloned().unwrap_or_default());
+    let brand: Vec<String> = brand.collect();
     fonts.families.insert(FontFamily::Name("brand".into()), brand);
     // CJK and other scripts from craft-fonts as fallbacks (Noto Sans CJK only with FIGCRAFT_EMBED_CJK).
     const BUILT_IN: [&str; 7] =
@@ -373,7 +380,7 @@ pub fn install_fonts(ctx: &Context, system: bool, cjk: u8) {
     extra.extend(craft(true));
     for (key, data) in extra {
         fonts.font_data.insert(key.clone(), Arc::new(data));
-        for fam in [FontFamily::Proportional, FontFamily::Name("semibold".into())] {
+        for fam in [FontFamily::Proportional, FontFamily::Name("medium".into()), FontFamily::Name("semibold".into())] {
             if let Some(list) = fonts.families.get_mut(&fam) {
                 list.push(key.clone());
             }
@@ -429,6 +436,20 @@ pub fn font_data(face: &figcraft_text::Face) -> FontData {
 
 pub fn semibold(size: f32) -> FontId {
     FontId::new(size, FontFamily::Name("semibold".into()))
+}
+
+pub fn medium(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name("medium".into()))
+}
+
+/// IBM Plex Mono 400: numeric values, shortcuts, ids.
+pub fn mono(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Monospace)
+}
+
+/// IBM Plex Mono 500: the small uppercase labels.
+pub fn mono_medium(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name("mono-medium".into()))
 }
 
 pub fn brand(size: f32) -> FontId {

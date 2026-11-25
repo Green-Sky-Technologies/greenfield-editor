@@ -432,7 +432,7 @@ fn number_field_impl(
             let te = egui::TextEdit::singleline(&mut text)
                 .id(id.with("te"))
                 .frame(egui::Frame::NONE)
-                .font(regular(11.0))
+                .font(crate::theme::mono(11.0))
                 .desired_width(edit_rect.width() - 6.0)
                 .align(egui::Align2::LEFT_CENTER);
             // TextEdit already reserves the theme's 24 pt interaction height. Insetting its
@@ -507,7 +507,7 @@ fn number_field_impl(
             };
             let col = if value.is_some() { t.text } else { t.text_secondary };
             // A value too long for its room ends in "…", so a cut number never reads as another.
-            crate::bidi::paint_name(ui.painter(), pos2(edit_rect.min.x, rect.center().y), &s, regular(11.0), col, edit_rect.width());
+            crate::bidi::paint_name(ui.painter(), pos2(edit_rect.min.x, rect.center().y), &s, crate::theme::mono(11.0), col, edit_rect.width());
         }
     }
     // The variable button shows while the pointer is over a bindable field.
@@ -998,13 +998,15 @@ pub fn section_header_resp(ui: &mut Ui, title: &str, buttons: &[(Icon, &str)], d
     if resp.hovered() && !dim {
         ui.ctx().set_cursor_icon(egui::CursorIcon::Default);
     }
-    ui.painter().text(
-        pos2(rect.min.x + PAD, rect.center().y),
-        Align2::LEFT_CENTER,
-        title,
-        semibold(11.0),
-        if dim { t.text_secondary } else { t.text },
+    let label_color = if dim { t.text_tertiary } else { t.text_secondary };
+    let mut job = egui::text::LayoutJob::default();
+    job.append(
+        &title.to_uppercase(),
+        0.0,
+        egui::TextFormat { font_id: crate::theme::mono_medium(10.0), color: label_color, extra_letter_spacing: 1.0, ..Default::default() },
     );
+    let galley = ui.painter().layout_job(job);
+    ui.painter().galley(pos2(rect.min.x + PAD, rect.center().y - galley.size().y / 2.0), galley, label_color);
     let mut out = None;
     let mut x = rect.max.x - PAD_RIGHT;
     for (i, (icon, tip)) in buttons.iter().enumerate().rev() {
@@ -1308,7 +1310,7 @@ pub fn radio(ui: &mut Ui, on: bool, label: &str) -> bool {
 /// button is grey with dim text (still readable) and never reports clicks.
 pub fn button(ui: &mut Ui, label: &str, primary: bool, enabled: bool) -> Response {
     let t = Tokens::get(ui.ctx());
-    let galley = ui.painter().layout_no_wrap(label.to_string(), regular(11.0), t.text);
+    let galley = ui.painter().layout_no_wrap(label.to_string(), crate::theme::medium(11.0), t.text);
     let sense = if enabled { Sense::click() } else { Sense::hover() };
     let (rect, resp) = ui.allocate_exact_size(vec2(galley.size().x + 24.0, FIELD_H), sense);
     a11y::button(&resp, label);
@@ -1324,7 +1326,7 @@ pub fn button(ui: &mut Ui, label: &str, primary: bool, enabled: bool) -> Respons
     if !primary {
         ui.painter().rect_stroke(rect, CornerRadius::same(5), Stroke::new(1.0, t.border_strong), StrokeKind::Inside);
     }
-    ui.painter().text(rect.center(), Align2::CENTER_CENTER, label, regular(11.0), text);
+    ui.painter().text(rect.center(), Align2::CENTER_CENTER, label, crate::theme::medium(11.0), text);
     resp
 }
 
