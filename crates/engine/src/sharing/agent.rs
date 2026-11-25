@@ -74,6 +74,10 @@ impl Session {
     /// The running command is the agent's: it is at work, on what it just edited or selected
     /// (else on what it worked on before in the same file).
     pub(crate) fn note_agent(&mut self, before: Option<Before>) {
+        if self.agent.is_none() || self.ds().is_err() {
+            return;
+        }
+        self.agent_runs += 1;
         let (Some(name), Ok(ds)) = (self.agent.clone(), self.ds()) else { return };
         let uid = ds.uid;
         let now = before.filter(|b| b.0 == uid).and_then(|(_, doc, sel)| touched(&doc, &ds.doc, &sel, &ds.selection));

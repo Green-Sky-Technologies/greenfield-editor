@@ -34,6 +34,7 @@ impl Session {
             pending_events: Vec::new(),
             agent: None,
             agent_presence: None,
+            agent_runs: 0,
             gesture_cmd: None,
         }
     }

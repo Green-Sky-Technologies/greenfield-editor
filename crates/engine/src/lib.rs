@@ -162,6 +162,9 @@ pub struct Session {
     pub agent: Option<String>,
     /// Where an attached AI agent last worked ([`Session::agent_presence_at`]): display only.
     pub agent_presence: Option<agent::AgentPresence>,
+    /// How many commands an AI agent has run in this session: a host labels the edits of a frame in
+    /// which it moved as the agent's.
+    pub agent_runs: u64,
     /// The file a gesture started with `edit.begin` is in ([`cmd::gesture`]), until `edit.commit` or
     /// `edit.cancel`. The editor's own gestures (a drag, the pen) don't set it.
     pub(crate) gesture_cmd: Option<u64>,

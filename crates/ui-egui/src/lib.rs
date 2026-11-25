@@ -577,8 +577,8 @@ pub struct UiState {
     pub host_events: Vec<HostEvent>,
     /// The agent presence the host was last told of ([`live::agent::post_changes`]).
     pub agent_posted: Option<live::agent::Posted>,
-    /// The selection and document the host was last told of ([`FigApp::post_document_events`]).
-    pub host_seen: Option<app::host_sync::Seen>,
+    /// What the host was last told of the tool and the file in front ([`FigApp::post_document_events`]).
+    pub host_seen: app::host_sync::Seen,
     /// The side panel open in a narrow window (a phone), where only one shows at a time.
     pub mobile_panel: Option<MobilePanel>,
     /// The window was narrow (one side panel at a time) at the last frame.
@@ -738,7 +738,7 @@ impl Default for UiState {
             canvas_mode: false,
             host_events: Vec::new(),
             agent_posted: None,
-            host_seen: None,
+            host_seen: app::host_sync::Seen::default(),
             mobile_panel: None,
             narrow: false,
             mirrored: false,
