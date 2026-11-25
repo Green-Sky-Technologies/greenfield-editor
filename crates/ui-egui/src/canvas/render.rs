@@ -15,6 +15,7 @@ pub(super) struct JobKey {
     /// Text lays out anew when fonts arrive (system fonts load in the background).
     fonts: u64,
     proof: bool,
+    background: Option<figcraft_color::Color>,
     dots: Option<figcraft_render::Dots>,
 }
 
@@ -46,7 +47,14 @@ fn covers(outer: &figcraft_render::View, inner: &figcraft_render::View) -> bool 
     o.x0 <= i.x0 + eps && o.y0 <= i.y0 + eps && o.x1 >= i.x1 - eps && o.y1 >= i.y1 - eps
 }
 
-pub(super) fn request_render(app: &mut FigApp, worker: &mut Worker, ppp: f32, max_texture_side: u32, dots: Option<figcraft_render::Dots>) {
+pub(super) fn request_render(
+    app: &mut FigApp,
+    worker: &mut Worker,
+    ppp: f32,
+    max_texture_side: u32,
+    background: Option<figcraft_color::Color>,
+    dots: Option<figcraft_render::Dots>,
+) {
     let Ok(ds) = app.session.ds() else { return };
     let rect = app.canvas.rect;
     let (mut ox, mut oy) = ds.view.origin();
@@ -85,6 +93,7 @@ pub(super) fn request_render(app: &mut FigApp, worker: &mut Worker, ppp: f32, ma
         solo: ds.focused(),
         fonts: figcraft_text::layout_generation(),
         proof,
+        background,
         dots,
     };
     if let Some(previous) = &app.canvas.submitted {
@@ -108,6 +117,7 @@ pub(super) fn request_render(app: &mut FigApp, worker: &mut Worker, ppp: f32, ma
         skip: vec![],
         solo: key.solo,
         proof,
+        background,
         dots,
         uid: ds.uid,
         zoom_preview: ds.view.pixel_preview_scale().is_none(),

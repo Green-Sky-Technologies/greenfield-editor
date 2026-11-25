@@ -494,6 +494,25 @@ pub fn dots(app: &FigApp, bg: Color32, t: &Tokens) -> Option<figcraft_render::Do
     Some(figcraft_render::Dots { step, size, color: color(alpha), faded: color(faded), lines, major })
 }
 
+/// The brand's canvas grid (docs/brand/README.md: `ink` at 9%, 1 px dots every 16 px at 100%,
+/// thinning out by halves zoomed out), drawn on the theme's ground in canvas mode.
+pub fn canvas_grid(zoom: f64, t: &Tokens) -> Option<figcraft_render::Dots> {
+    let (step, fade) = grid_spacing(zoom, CANVAS_GRID_STEP, 2, DOT_MIN_GAP)?;
+    let ink = |a: f32| figcraft_color::Color::from_rgba8(t.text.r(), t.text.g(), t.text.b(), (a * 255.0).round() as u8);
+    Some(figcraft_render::Dots {
+        step,
+        size: 1.0 / zoom,
+        color: ink(CANVAS_GRID_ALPHA),
+        faded: ink(CANVAS_GRID_ALPHA * fade),
+        lines: false,
+        major: 2,
+    })
+}
+
+/// The brand grid's spacing (page units) and its dots' opacity.
+const CANVAS_GRID_STEP: f64 = 16.0;
+const CANVAS_GRID_ALPHA: f32 = 0.09;
+
 /// The grid's spacing on the page at `zoom`, starting from `base` and multiplied by `major` until
 /// the marks are at least `min_gap` apart on screen, and how strongly the marks the next step
 /// drops still show (0 to 1).
