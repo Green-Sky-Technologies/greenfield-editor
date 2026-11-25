@@ -90,6 +90,11 @@ pub fn set_canvas_page(ctx: &Context, page: Color32) {
 
 /// `x` (opaque) as a document colour, for its contrast with another.
 fn c(x: Color32) -> figcraft_color::Color {
+    color_of(x)
+}
+
+/// `x` (opaque) as a document colour.
+pub fn color_of(x: Color32) -> figcraft_color::Color {
     figcraft_color::Color::new(f32::from(x.r()) / 255.0, f32::from(x.g()) / 255.0, f32::from(x.b()) / 255.0, 1.0)
 }
 

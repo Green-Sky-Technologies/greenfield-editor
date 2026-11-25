@@ -294,17 +294,8 @@ pub fn show(app: &mut FigApp, ui: &mut Ui, worker: &mut Worker) {
     let max_texture_side = (ctx.input(|i| i.max_texture_side).min(16_384) as u32).saturating_sub(1).max(1);
     let t = Tokens::get(&ctx);
     // Page background (also behind a stale/partial texture).
-    let bg = app
-        .session
-        .ds()
-        .ok()
-        .and_then(|ds| match ds.doc.node(ds.page).map(|n| &n.kind) {
-            Some(NodeKind::Page { background, .. }) => Some(doc_c32(&ctx, *background)),
-            _ => None,
-        })
-        .unwrap_or(t.canvas);
-    let dots = crate::board_bar::dots(app, bg, &t);
-    request_render(app, worker, ppp, max_texture_side, dots);
+    let Backdrop { bg, background, dots } = backdrop(app, &ctx, &t);
+    request_render(app, worker, ppp, max_texture_side, background, dots);
     // Every finished render is shown, even when a newer one is already on its way: renders finish
     // in order, and an edit every frame (a drag) would otherwise never show until it stopped.
     let shown = app.session.ds().map(|ds| (ds.uid, ds.page)).ok();
@@ -457,3 +448,29 @@ mod zoom_preview_tests;
 
 #[cfg(test)]
 mod tab_switch_tests;
+
+/// What the canvas draws under the layers.
+pub(crate) struct Backdrop {
+    /// The colour around and behind the render.
+    pub bg: Color32,
+    /// The render's background instead of the page's, when it differs.
+    pub background: Option<figcraft_color::Color>,
+    pub dots: Option<figcraft_render::Dots>,
+}
+
+/// The page's background and a board's grid; in canvas mode (Story 2.1) a page left at the default
+/// background shows the theme's ground and the brand's dot grid instead, so `view.themeDark` and
+/// `view.themeLight` restyle the canvas without editing the file. A page given a colour keeps it.
+pub(crate) fn backdrop(app: &FigApp, ctx: &egui::Context, t: &Tokens) -> Backdrop {
+    let page = app.session.ds().ok().and_then(|ds| match ds.doc.node(ds.page).map(|n| &n.kind) {
+        Some(NodeKind::Page { background, .. }) => Some(*background),
+        _ => None,
+    });
+    if app.ui.canvas_mode && page == Some(figcraft_color::Color::DEFAULT_PAGE) {
+        let zoom = app.session.ds().map_or(1.0, |ds| ds.view.zoom);
+        let dots = crate::board_bar::dots(app, t.canvas, t).or_else(|| crate::board_bar::canvas_grid(zoom, t));
+        return Backdrop { bg: t.canvas, background: Some(crate::theme::color_of(t.canvas)), dots };
+    }
+    let bg = page.map_or(t.canvas, |c| doc_c32(ctx, c));
+    Backdrop { bg, background: None, dots: crate::board_bar::dots(app, bg, t) }
+}

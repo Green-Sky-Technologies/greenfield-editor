@@ -63,7 +63,9 @@ pub struct Job {
     pub solo: Option<NodeId>,
     /// Soft-proof sRGB: stripe the colours sRGB can't show.
     pub proof: bool,
-    /// A board's dot grid under the layers.
+    /// The background instead of the page's (canvas mode's themed ground).
+    pub background: Option<figcraft_color::Color>,
+    /// A dot grid under the layers (a board's, or canvas mode's).
     pub dots: Option<figcraft_render::Dots>,
     /// The document's [`figcraft_engine::DocState::uid`]: images of other files are never shown.
     pub uid: u64,
@@ -124,6 +126,7 @@ fn options(job: &Job) -> figcraft_render::Options {
         solo: job.solo,
         lod: true,
         magnified_image_pixels: true,
+        background: job.background,
         dots: job.dots,
         ..Default::default()
     }
@@ -190,6 +193,7 @@ fn same_settings(a: &Job, b: &Job) -> bool {
         && a.skip == b.skip
         && a.solo == b.solo
         && a.proof == b.proof
+        && a.background == b.background
         && a.dots == b.dots
 }
 

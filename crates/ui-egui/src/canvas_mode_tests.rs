@@ -2,6 +2,8 @@
 //! Comment tool's click go to the host; the keys keep working; turning it off brings the panels
 //! back with nothing reloaded.
 
+use std::sync::Arc;
+
 use egui::{Event, Key, Modifiers, PointerButton, Pos2};
 use figcraft_engine::Session;
 use figcraft_engine::tools::ToolId;
@@ -197,4 +199,44 @@ fn a_host_that_never_drains_cannot_grow_the_queue_without_end() {
     let kept = u.app.take_host_events();
     assert_eq!(kept.len(), 1024);
     assert_eq!(kept.last().unwrap().data, json!({"i": 4999}), "the newest are kept");
+}
+
+fn backdrop(u: &Ui) -> crate::canvas::Backdrop {
+    crate::canvas::backdrop(&u.app, &u.ctx, &crate::theme::Tokens::get(&u.ctx))
+}
+
+#[test]
+fn in_canvas_mode_the_canvas_follows_the_theme_without_editing_the_file() {
+    let (mut u, _) = doc();
+    let page = |u: &Ui| u.app.session.ds().unwrap().doc.clone();
+    let (before, depth) = (page(&u), u.app.session.undo_depth());
+    let off = backdrop(&u);
+    assert_eq!((off.background, off.dots), (None, None), "outside canvas mode the page's own background, no grid");
+
+    u.app.run("view.canvasMode", json!({"on": true}));
+    for (theme, tokens) in [("view.themeDark", crate::theme::Tokens::dark()), ("view.themeLight", crate::theme::Tokens::light())] {
+        u.app.run(theme, json!({}));
+        u.frames(2, Vec::new);
+        let b = backdrop(&u);
+        assert_eq!(b.bg, tokens.canvas, "{theme}");
+        assert_eq!(b.background, Some(crate::theme::color_of(tokens.canvas)), "{theme}: the render's background too");
+        let dots = b.dots.expect("the brand's dot grid");
+        assert_eq!(dots.color.to_rgba8(), [tokens.text.r(), tokens.text.g(), tokens.text.b(), 23], "{theme}: ink at 9%");
+        assert!(!dots.lines);
+        assert_eq!(dots.step, 16.0, "every 16 px at 100%");
+    }
+    assert!(Arc::ptr_eq(&before, &page(&u)), "the file is not edited");
+    assert_eq!(u.app.session.undo_depth(), depth, "no undo step");
+}
+
+#[test]
+fn a_page_given_a_colour_keeps_it_in_canvas_mode() {
+    let (mut u, _) = doc();
+    u.app.run("view.canvasMode", json!({"on": true}));
+    u.app.run("view.themeDark", json!({}));
+    u.app.run("page.setBackground", json!({"color": "#336699"}));
+    u.frames(2, Vec::new);
+    let b = backdrop(&u);
+    assert_eq!((b.background, b.dots), (None, None));
+    assert_eq!(b.bg, egui::Color32::from_rgb(0x33, 0x66, 0x99));
 }
