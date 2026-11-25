@@ -15,6 +15,7 @@ mod commands;
 mod control;
 mod files;
 mod frame;
+pub mod host_sync;
 mod ime;
 
 impl FigApp {
@@ -190,6 +191,7 @@ impl FigApp {
         let (files, prefs) = (self.session.docs.len(), self.session.prefs.clone());
         self.frame(ui);
         live::agent::post_changes(self, &ctx);
+        self.post_document_events();
         windows::settle(self, &ctx, files);
         if self.session.prefs != prefs {
             // This window too: a preference set during the frame (the interface size, the theme)
