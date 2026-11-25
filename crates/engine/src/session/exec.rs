@@ -101,7 +101,7 @@ impl Session {
         // context so the panic does not clear the group's buffered events.
         let group_depth_before = self.group_depth;
         let pending_events_before = self.pending_events.len();
-        let result = guard::run(id, || (spec.run)(self, params))
+        let mut result = guard::run(id, || (spec.run)(self, params))
             .and_then(|v| self.check_instance_structure(id, &before).map(|()| v))
             .and_then(|v| self.check_preview(id, &before).map(|()| v))
             .and_then(|v| self.check_live_access(id, &before).map(|()| v))
@@ -113,6 +113,9 @@ impl Session {
                     Ok(v)
                 })
             });
+        if let Ok(v) = &mut result {
+            self.warn_missing_fonts(v, &before);
+        }
         match &result {
             Ok(_) => {
                 self.after_command(spec, before);
@@ -163,6 +166,24 @@ impl Session {
             }
             Err(EngineError::Internal { .. }) => self.restore_after_internal_error(group_depth, pending_events),
             Err(_) => {}
+        }
+    }
+
+    /// Add `warnings` to an object result when the edit gave text a font family that isn't
+    /// available ([`crate::fonts::newly_missing`]): `inspect` reports the requested family while
+    /// the canvas draws a fallback, so a caller can't see it otherwise.
+    fn warn_missing_fonts(&self, result: &mut Value, before: &Option<(Arc<Document>, Vec<NodeId>, NodeId, u64)>) {
+        let Some((bdoc, _, _, uid)) = before else { return };
+        let Some(ds) = self.docs.iter().find(|d| d.uid == *uid) else { return };
+        if Arc::ptr_eq(&ds.doc, bdoc) || !result.is_object() {
+            return;
+        }
+        let warnings: Vec<String> = crate::fonts::newly_missing(&ds.doc, bdoc)
+            .into_iter()
+            .map(|f| format!("font family \"{f}\" isn't available: its text is drawn in a fallback font"))
+            .collect();
+        if !warnings.is_empty() {
+            result["warnings"] = Value::from(warnings);
         }
     }
 

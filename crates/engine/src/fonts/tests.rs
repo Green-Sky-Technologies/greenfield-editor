@@ -235,3 +235,22 @@ fn fonts_load_from_files_and_rescans_report_new_families() {
     let r = s.execute("text.rescanFonts", &json!({})).unwrap();
     assert!(r["added"].is_array());
 }
+
+#[test]
+fn an_edit_that_names_an_unavailable_family_warns_once_in_its_result() {
+    figcraft_text::scan_system_fonts();
+    let mut s = Session::new();
+    let id = id_of(&s.execute("text.create", &json!({"text": "Hamburgefonstiv", "x": 0, "y": 0})).unwrap()["id"]).unwrap();
+    let set = |s: &mut Session, family: &str| s.execute("node.set", &json!({"id": id, "props": {"fontFamily": family}})).unwrap();
+
+    let r = set(&mut s, "FigCraft Missing W");
+    assert_eq!(r["warnings"], json!(["font family \"FigCraft Missing W\" isn't available: its text is drawn in a fallback font"]));
+    s.execute("select.set", &json!({"ids": [id]})).unwrap();
+    let r = s.execute("transform.nudge", &json!({"dx": 1})).unwrap();
+    assert!(r.get("warnings").is_none(), "only an edit that newly names the family warns: {r}");
+
+    if let Some(family) = installed() {
+        let r = set(&mut s, &family);
+        assert!(r.get("warnings").is_none(), "an installed family doesn't warn: {r}");
+    }
+}

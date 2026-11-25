@@ -69,6 +69,35 @@ pub fn missing(doc: &Document) -> Vec<Missing> {
         .collect()
 }
 
+/// The font families an edit newly gave a text layer (a new layer's, or ones its style or styled
+/// ranges didn't use before) that no installed or built-in font provides, once each. That text is
+/// drawn in a fallback font while the document still names the family, so the command's result
+/// says so. Empty until the installed fonts are indexed, and for an edit too large to diff.
+pub(crate) fn newly_missing(doc: &Document, before: &Document) -> Vec<String> {
+    if !figcraft_text::installed_fonts_known() {
+        return Vec::new();
+    }
+    let families = |n: &figcraft_doc::Node| -> Vec<String> {
+        let NodeKind::Text(t) = &n.kind else { return Vec::new() };
+        let mut f: Vec<String> = t.spans().into_iter().map(|(_, _, st)| st.font_family.trim().to_string()).collect();
+        f.push(t.style.font_family.trim().to_string());
+        f
+    };
+    let mut out: Vec<String> = Vec::new();
+    for id in doc.changed_ids(before, 10_000).unwrap_or_default() {
+        let Some(n) = doc.node(id) else { continue };
+        let had: Vec<String> = before.node(id).map(families).unwrap_or_default();
+        for family in families(n) {
+            let known = |f: &String| f.eq_ignore_ascii_case(&family);
+            if family.is_empty() || had.iter().any(known) || out.iter().any(known) || figcraft_text::has_family(&family) {
+                continue;
+            }
+            out.push(family);
+        }
+    }
+    out
+}
+
 /// A family's download ([`downloads`]).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Download {
