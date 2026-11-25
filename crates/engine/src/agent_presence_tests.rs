@@ -141,6 +141,44 @@ fn another_file_starts_afresh() {
 }
 
 #[test]
+fn a_frame_the_agent_changed_keeps_its_outline_when_it_also_adds_to_it() {
+    let mut s = Session::new();
+    let f = id(&s.execute("frame.create", &json!({"x": 0, "y": 0, "width": 300, "height": 200})).unwrap());
+    let out = s
+        .execute_as(
+            Some("Claude"),
+            "command.batch",
+            &json!({"commands": [
+                {"command": "node.set", "params": {"ids": [f], "props": {"fill": "#0B1F4B"}}},
+                {"command": "text.create", "params": {"parent": f, "text": "Hello", "x": 10, "y": 10}},
+            ]}),
+        )
+        .unwrap();
+    let t = id(&out[1]);
+    assert_eq!(s.agent_presence.clone().unwrap().layers, vec![f, t], "the frame's fill changed: it is the agent's work too");
+}
+
+#[test]
+fn a_held_turn_outlines_every_layer_its_commands_touched() {
+    let mut s = Session::new();
+    let f = id(&s.execute("frame.create", &json!({"x": 0, "y": 0, "width": 300, "height": 200})).unwrap());
+    let other = rect(&mut s, None, 400);
+    s.execute("agent.presence", &json!({"name": "Claude", "active": true})).unwrap();
+    s.execute_as(Some("Claude"), "node.set", &json!({"ids": [f], "props": {"fill": "#0B1F4B"}})).unwrap();
+    let t = id(&s.execute_as(Some("Claude"), "text.create", &json!({"parent": f, "text": "Hello", "x": 10, "y": 10})).unwrap());
+    s.execute_as(Some("Claude"), "node.set", &json!({"ids": [other], "props": {"x": 500}})).unwrap();
+    s.execute_as(Some("Claude"), "select.set", &json!({"ids": [other]})).unwrap();
+    assert_eq!(s.agent_presence.clone().unwrap().layers, vec![f, t, other], "every layer of the turn, in the order it touched them");
+    s.execute_as(Some("Claude"), "edit.delete", &json!({"ids": [t]})).unwrap();
+    assert_eq!(s.agent_presence.clone().unwrap().layers, vec![f, other], "a deleted layer drops out");
+
+    // The next turn starts afresh.
+    s.execute("agent.presence", &json!({"name": "Claude", "active": false})).unwrap();
+    s.execute("agent.presence", &json!({"name": "Claude", "active": true})).unwrap();
+    assert!(s.agent_presence.clone().unwrap().layers.is_empty());
+}
+
+#[test]
 fn an_agents_edits_leave_the_users_selection_alone() {
     let mut s = Session::new();
     let f = id(&s.execute("frame.create", &json!({"x": 0, "y": 0, "width": 300, "height": 200})).unwrap());
