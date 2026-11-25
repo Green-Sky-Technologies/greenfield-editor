@@ -29,16 +29,8 @@ wasm-bindgen --version | grep -qx "wasm-bindgen $WASM_BINDGEN_VERSION" \
 wasm-opt --version | grep -Eq "^wasm-opt version $BINARYEN_VERSION( |$)" \
   || { echo "error: need wasm-opt $BINARYEN_VERSION, have '$(wasm-opt --version)'" >&2; exit 1; }
 
-# 1. craft-fonts at its pinned commit, pristine. Init in place rather than clone: CI restores a
-#    cache before this runs, so the dir can exist without .git.
-if [[ ! -d "$FONTS/.git" ]]; then
-  git init --quiet "$FONTS"
-  git -C "$FONTS" remote add origin "$CRAFT_FONTS_REPO"
-fi
-git -C "$FONTS" cat-file -e "$CRAFT_FONTS_SHA^{commit}" 2>/dev/null || git -C "$FONTS" fetch --quiet --depth 1 origin "$CRAFT_FONTS_SHA"
-git -C "$FONTS" checkout --quiet --force "$CRAFT_FONTS_SHA"
-git -C "$FONTS" clean -fdq
-[[ "$(git -C "$FONTS" rev-parse HEAD)" == "$CRAFT_FONTS_SHA" ]] || { echo "error: $FONTS is not at $CRAFT_FONTS_SHA" >&2; exit 1; }
+# 1. craft-fonts at its pinned commit, pristine.
+"$HERE/craft-fonts.sh" "$FONTS"
 
 # 2. The marks check on the source (Story 2.2).
 "$HERE/check-marks.sh" src "$ROOT"

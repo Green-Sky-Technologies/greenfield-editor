@@ -10,6 +10,7 @@ reads like the changes we carry; each says its Story. Upstream's `LICENSE-*`, `N
 
 - `greenfield/versions.env` pins the build image digest, binaryen, wasm-bindgen, trunk, craft-fonts and the 25 MiB size gate. Different tool versions give different bytes.
 - `greenfield/build.sh` is the whole build: marks check on the source, `trunk build --release`, size gate, marks check on the site and its self-tests, site plus licences into `.cache/site/`. `greenfield/toolchain.sh` installs the pinned tools in the image. `greenfield/verify/docker-build.sh` runs both in a clean container; that is the only supported way to build locally.
+- `greenfield/build-cli.sh` builds the headless `figcraft-cli` for Linux x86_64, static against musl (any glibc; Vercel Sandbox is Amazon Linux 2023), with craft-fonts embedded, then smoke-tests it (static check, `info`, a render with embedded fonts only) and packages it with its licences. It needs an x86_64 host, so CI's `cli` job is where it runs. `greenfield/craft-fonts.sh` checks out the pinned craft-fonts for both builds.
 - `greenfield/test.sh` runs the Rust tests of the crates our commits touch, one cargo invocation at a time. Known upstream failures go in `greenfield/test-skips.txt`, each with a reason.
 - `greenfield/check-marks.sh`, `check-marks.allow`, `upstream-marks/`: fail the build when the FigCraft or ArtCraft name or logo is user-visible (Story 2.2).
 - `greenfield/tools/`: `gen-marks.py` and `make-chrome-fonts.sh` regenerate the committed icons, mark bitmap and chrome fonts. `rebrand-strings.pl` renamed the product in strings; keep it for syncs, because a new upstream string that says FigCraft fails the marks check and this script fixes it.
@@ -18,8 +19,9 @@ reads like the changes we carry; each says its Story. Upstream's `LICENSE-*`, `N
 
 ## Releases
 
-Every push to `main` that passes build and tests publishes release `editor-<12-char sha>` with the
-site zip and its sha256 in the notes and the job summary. Pin it in greenfield's
+Every push to `main` that passes build, tests and the CLI build publishes release
+`editor-<12-char sha>` with the site zip and `figcraft-cli-<12-char sha>-linux-x86_64.tar.gz`, each
+with its sha256 in the notes and the job summary. Pin the site in greenfield's
 `packages/bridge/editor-release.json`. Pull requests build and test but never publish.
 
 ## Sync routine
