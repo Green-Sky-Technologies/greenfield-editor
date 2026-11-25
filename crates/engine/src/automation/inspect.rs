@@ -582,7 +582,9 @@ pub fn document_with_options(s: &Session, depth: usize, all_pages: bool, options
         "images": doc.images.len(),
         "colorProfile": doc.color_profile.id(),
         "textEdit": ds.text_edit,
-        "history": {"undo": s.undo_labels(20), "redo": s.undo_depth().1},
+        // `revision` changes on every edit, undo and redo: a host can poll it as a cheap change gate.
+        "revision": ds.revision,
+        "history": {"undo": s.undo_labels(20), "undoDepth": s.undo_depth().0, "redo": s.undo_depth().1},
     })
 }
 
