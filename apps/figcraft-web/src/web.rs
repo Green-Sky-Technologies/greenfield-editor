@@ -225,6 +225,7 @@ impl eframe::App for WebShell {
             bridge.set_dirty(self.fig.session.docs.iter().any(|d| d.is_dirty()));
         }
         self.post_host_events();
+        crate::api::wake();
     }
 
     fn raw_input_hook(&mut self, ctx: &egui::Context, raw_input: &mut egui::RawInput) {
@@ -241,6 +242,7 @@ impl eframe::App for WebShell {
         self.fig.control_queue.extend(crate::api::take_requests());
         self.fig.ui(ui);
         self.post_host_events();
+        crate::api::wake();
         // The fonts on this computer that text asked for this frame are read; once one is in,
         // auto-sizing text measured in a fallback fits it.
         crate::local_fonts::load_wanted(ui.ctx());

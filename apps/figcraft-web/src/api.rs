@@ -28,7 +28,8 @@
 //! it works (`execute` itself has no agent). `command.batch` carries it to every step. A host that
 //! knows when the agent's turn starts and ends holds the presence meanwhile with `agent.presence`.
 //!
-//! Results resolve with the method's `result`; errors reject with an `Error`.
+//! Results resolve with the method's `result` as soon as the frame that ran it ends; errors reject
+//! with an `Error`.
 
 use std::cell::{Cell, RefCell};
 use std::future::Future;
@@ -50,8 +51,9 @@ use crate::saved_files::SavedFiles;
 /// The app id in `window.<app>`.
 const APP: &str = "figcraft";
 
-/// How often a waiting call looks for the app's reply, in milliseconds (about a frame).
-const POLL_MS: i32 = 16;
+/// A waiting call looks for the app's reply when a frame ends ([`wake`]), and at the latest this
+/// often, in milliseconds, for a reply sent between frames.
+const FALLBACK_MS: i32 = 16;
 
 thread_local! {
     static QUEUE: RefCell<Vec<ControlRequest>> = const { RefCell::new(Vec::new()) };
@@ -59,6 +61,8 @@ thread_local! {
     static CTX: RefCell<Option<egui::Context>> = const { RefCell::new(None) };
     static CAPTURE: Cell<bool> = const { Cell::new(false) };
     static SAVED: RefCell<SavedFiles> = RefCell::new(SavedFiles::default());
+    /// The waiting calls' resolvers, called when a frame ends.
+    static WAKE: RefCell<Vec<js_sys::Function>> = const { RefCell::new(Vec::new()) };
 }
 
 pub fn connect(ctx: egui::Context) {
@@ -142,18 +146,28 @@ fn send(method: &str, params: Value) -> Pin<Box<dyn Future<Output = Value>>> {
             if let Some(reply) = waiting.poll() {
                 return reply;
             }
-            sleep(POLL_MS).await;
+            next_wake().await;
         }
     })
 }
 
-async fn sleep(ms: i32) {
+/// Resolves when the next frame ends, or after [`FALLBACK_MS`].
+async fn next_wake() {
     let promise = js_sys::Promise::new(&mut |resolve, _| {
         if let Some(window) = web_sys::window() {
-            let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms);
+            let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, FALLBACK_MS);
         }
+        WAKE.with(|w| w.borrow_mut().push(resolve));
     });
     let _ = JsFuture::from(promise).await;
+}
+
+/// A frame ended: the calls it answered resolve now, in the same task, before the browser paints
+/// (not on the next poll, which cost every call up to a frame).
+pub fn wake() {
+    for resolve in WAKE.with(|w| std::mem::take(&mut *w.borrow_mut())) {
+        let _ = resolve.call0(&JsValue::NULL);
+    }
 }
 
 /// A reply as a promise outcome: the `result`, or an `Error` carrying the `error`.
