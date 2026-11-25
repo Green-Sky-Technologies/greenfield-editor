@@ -240,3 +240,28 @@ fn a_page_given_a_colour_keeps_it_in_canvas_mode() {
     assert_eq!((b.background, b.dots), (None, None));
     assert_eq!(b.bg, egui::Color32::from_rgb(0x33, 0x66, 0x99));
 }
+
+fn links_drawn(u: &mut Ui) -> usize {
+    let out = u.frame_output(vec![]);
+    flat(&out.shapes).iter().filter(|s| matches!(s, egui::Shape::CubicBezier(_))).count()
+}
+
+#[test]
+fn the_hosts_prototype_tab_shows_prototype_links_on_the_canvas() {
+    let (mut u, r) = doc();
+    let f = id(&u.app.session.execute("node.create", &json!({"type": "frame", "x": 600, "y": 0, "width": 200, "height": 300})).unwrap());
+    u.app.session.execute("proto.interaction.add", &json!({"id": r, "dest": f})).unwrap();
+    u.app.run("view.canvasMode", json!({"on": true}));
+    u.frames(2, Vec::new);
+    assert_eq!(links_drawn(&mut u), 0, "the Design tab draws no links");
+
+    u.app.run("view.prototype", json!({}));
+    assert_eq!(links_drawn(&mut u), 1, "the Prototype tab draws the link from the layer to its frame");
+    let kinds: Vec<Value> = events(&mut u, "ui.request").iter().map(|d| d["kind"].clone()).collect();
+    assert_eq!(kinds, [json!("panel.prototype")], "the host still hears it, to show its own tab");
+
+    u.app.run("view.design", json!({}));
+    assert_eq!(links_drawn(&mut u), 0);
+    u.app.run("view.designPrototype", json!({}));
+    assert_eq!(links_drawn(&mut u), 1, "Shift+E switches to it as well");
+}
