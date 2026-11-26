@@ -101,6 +101,7 @@ pub const NODE_KEYS: &[&str] = &[
     "textPath",
     "textStyleRanges",
     "type",
+    "variableModes",
     "vertices",
     "visible",
     "width",
@@ -381,6 +382,9 @@ fn dev_props(doc: &Document, n: &Node, o: &mut serde_json::Map<String, Value>, o
     }
     if !n.bound.is_empty() {
         insert_prop(o, options, "boundVariables", || json!(n.bound));
+    }
+    if !n.var_modes.is_empty() {
+        insert_prop(o, options, "variableModes", || json!(n.var_modes));
     }
     if !n.overrides.is_empty() {
         insert_prop(o, options, "overrides", || json!(n.overrides));

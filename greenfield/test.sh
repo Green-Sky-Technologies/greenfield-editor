@@ -30,6 +30,8 @@ t -p figcraft-ui-egui --lib canvas_mode_tests             # 2.11
 t -p figcraft-web --bin figcraft-web query_tests          # 2.11
 t -p figcraft-engine --lib gesture_command_tests          # 2.12
 t -p figcraft-engine --lib agent_presence_tests           # 2.4
+t -p figcraft-engine --lib comment_agent_tests            # 2.4: the agent's name
+t -p figcraft-engine --lib inspect_fields_tests::variable_modes  # 5.9: variable modes
 t -p figcraft-ui-egui --lib live::agent                   # 2.4
 t -p figcraft-ui-egui --lib host_sync_tests               # 2.3
 echo "all passed"

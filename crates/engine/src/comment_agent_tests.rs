@@ -5,7 +5,7 @@
 use serde_json::{Value, json};
 
 use crate::Session;
-use crate::cmd::comment::agent_author;
+use crate::cmd::comment::{agent_author, agent_name};
 use crate::live::initials;
 
 fn as_agent(s: &mut Session, agent: &str, cmd: &str, p: Value) -> Value {
@@ -60,7 +60,17 @@ fn an_agent_without_a_name_is_still_not_the_user() {
 }
 
 #[test]
+fn an_agent_shows_as_named_while_its_comments_say_it_is_one() {
+    let mut s = Session::new();
+    as_agent(&mut s, "Claude", "comment.add", json!({"x": 0, "y": 0, "text": "Hi"}));
+    assert_eq!(s.agent_presence.as_ref().unwrap().name, "Claude", "the canvas tag and the host's events: the name as given");
+    assert_eq!(thread(&mut s, None)["author"], "Claude (agent)", "a comment's signature never reads as a person's");
+}
+
+#[test]
 fn agent_names_are_cleaned() {
+    assert_eq!(agent_name("  Claude  "), "Claude");
+    assert_eq!(agent_name("\u{7}\n "), "AI agent");
     assert_eq!(agent_author("  Claude  "), "Claude (agent)");
     assert_eq!(agent_author("\u{7}\n "), "AI agent");
     assert_eq!(agent_author("a\u{0}b"), "ab (agent)");

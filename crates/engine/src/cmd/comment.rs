@@ -272,12 +272,23 @@ pub fn user_name(s: &Session) -> String {
     if n.is_empty() { DEFAULT_AUTHOR.into() } else { n.to_string() }
 }
 
+/// An AI agent's client name without control characters, trimmed and capped; `None` when blank.
+fn clean_agent_name(name: &str) -> Option<String> {
+    let n: String = name.chars().filter(|c| !c.is_control()).collect();
+    let n: String = n.trim().chars().take(MAX_AGENT_NAME).collect();
+    (!n.is_empty()).then_some(n)
+}
+
+/// How an AI agent is shown at work (its outline's tag, its avatar, the host's events): its
+/// client's name as given, or [`DEFAULT_AGENT`] when it gave none.
+pub fn agent_name(name: &str) -> String {
+    clean_agent_name(name).unwrap_or_else(|| DEFAULT_AGENT.into())
+}
+
 /// How an AI agent's comments are signed: its client's name, marked so it never reads as a
 /// person's ("Claude" → "Claude (agent)"), or [`DEFAULT_AGENT`] when it gave none.
 pub fn agent_author(name: &str) -> String {
-    let n: String = name.chars().filter(|c| !c.is_control()).collect();
-    let n: String = n.trim().chars().take(MAX_AGENT_NAME).collect();
-    if n.is_empty() { DEFAULT_AGENT.into() } else { format!("{n} (agent)") }
+    clean_agent_name(name).map_or_else(|| DEFAULT_AGENT.into(), |n| format!("{n} (agent)"))
 }
 
 /// Who acts when no `author` is given: the AI agent the command runs for, else the user.

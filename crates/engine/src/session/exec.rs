@@ -55,15 +55,32 @@ impl Session {
     /// [`Session::execute`] for an AI agent named `agent` (the client's name; empty when it gave
     /// none), or for the user (`None`): the comments it makes are signed with the agent's name and
     /// marked as an agent's, and the app shows where it works ([`Session::agent_presence_at`]).
+    /// The agent's commands leave the user's selection as it was (less the layers they removed);
+    /// the steps of one batch still see what earlier steps selected.
     pub fn execute_as(&mut self, agent: Option<&str>, id: &str, params: &Value) -> Result<Value> {
         let was = std::mem::replace(&mut self.agent, agent.map(cmd::comment::agent_author));
         let before = agent.and_then(|_| self.agent_before());
         let r = self.execute(id, params);
-        if agent.is_some() {
-            self.note_agent(before);
+        if let Some(name) = agent {
+            let users = before.as_ref().map(|(uid, _, sel)| (*uid, sel.clone()));
+            self.note_agent(cmd::comment::agent_name(name), before);
+            if let Some((uid, sel)) = users {
+                self.restore_selection(uid, sel);
+            }
         }
         self.agent = was;
         r
+    }
+
+    /// Put `selection` back in file `uid` if it is still in front, without the layers gone since.
+    fn restore_selection(&mut self, uid: u64, selection: Vec<NodeId>) {
+        let Ok(ds) = self.ds_mut() else { return };
+        if ds.uid != uid || ds.selection == selection {
+            return;
+        }
+        ds.selection = selection;
+        ds.clean_selection();
+        ds.revision += 1;
     }
 
     /// Run a command by id. Mutations become one undo step; a failure or panic leaves the document

@@ -277,7 +277,7 @@ fn an_agents_edit_is_labelled_with_its_name() {
     let (mut u, r) = setup();
     u.app.session.execute_as(Some("Claude"), "node.set", &json!({"id": r, "x": 7})).unwrap();
     u.frames(2, Vec::new);
-    assert_eq!(doc_change(&mut u)["agent"], json!("Claude (agent)"));
+    assert_eq!(doc_change(&mut u)["agent"], json!("Claude"));
     u.app.run("node.set", json!({"id": r, "x": 8}));
     u.frames(2, Vec::new);
     assert_eq!(doc_change(&mut u)["agent"], Value::Null, "the person's edit");

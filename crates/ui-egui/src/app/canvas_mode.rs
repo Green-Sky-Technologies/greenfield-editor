@@ -10,7 +10,7 @@
 //! [`HostEvent`]s are also how the app tells the host what happened (see [`FigApp::host_event`]);
 //! the browser shell drains them every frame ([`FigApp::take_host_events`]).
 
-use super::{FigApp, NodeId, Value, json};
+use super::{FigApp, NodeId, RightTab, Value, json};
 
 /// The most events kept for a host that doesn't drain them (the desktop app never does): the
 /// oldest go first.
@@ -28,6 +28,17 @@ pub struct HostEvent {
 fn for_host(kind: &str) -> bool {
     ["dialog.", "panel.", "palette.", "home", "present", "preview"].iter().any(|p| kind.starts_with(p))
         || matches!(kind, "comment.new" | "contextMenu" | "layers.rename" | "layers.collapseAll" | "view.devCompare")
+}
+
+/// The tab a panel request leaves the editor on. In canvas mode the host draws the tabs, but the
+/// canvas still follows them: it draws prototype links only under the Prototype tab.
+fn tab_after(kind: &str, now: RightTab) -> Option<RightTab> {
+    match kind {
+        "panel.design" => Some(RightTab::Design),
+        "panel.prototype" => Some(RightTab::Prototype),
+        "panel.designPrototype" => Some(if now == RightTab::Prototype { RightTab::Design } else { RightTab::Prototype }),
+        _ => None,
+    }
 }
 
 impl FigApp {
@@ -73,6 +84,9 @@ impl FigApp {
     pub(crate) fn divert_ui_request(&mut self, kind: &str, data: &Value) -> bool {
         if !self.ui.canvas_mode || !for_host(kind) {
             return false;
+        }
+        if let Some(tab) = tab_after(kind, self.ui.right_tab) {
+            self.ui.right_tab = tab;
         }
         // Where the click was: the Comment tool's request carries a page point.
         let at = match (kind, data.get("x").and_then(Value::as_f64), data.get("y").and_then(Value::as_f64)) {
